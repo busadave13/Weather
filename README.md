@@ -1,67 +1,153 @@
-# Weather
-Test service for mockery
+# Weather API
+
+A .NET 9.0 ASP.NET Core Web API that aggregates weather data from multiple sensor services.
+
+## Overview
+
+This project demonstrates a clean architecture pattern for a weather service that:
+- Aggregates temperature, wind, and precipitation data from separate sensor services
+- Maps internal sensor response models to public API models
+- Uses dependency injection for testability
+- Implements parallel calls for efficient data retrieval
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Weather API                          │
+├─────────────────────────────────────────────────────────┤
+│  Controllers                                            │
+│  ├── WeatherController (combined data)                  │
+│  ├── TemperatureController                              │
+│  ├── WindController                                     │
+│  └── PrecipitationController                            │
+├─────────────────────────────────────────────────────────┤
+│  Business Logic Layer                                   │
+│  ├── Maps sensor responses to API models                │
+│  └── Orchestrates parallel sensor calls                 │
+├─────────────────────────────────────────────────────────┤
+│  Clients Layer                                          │
+│  ├── TemperatureSensorClient                            │
+│  ├── WindSensorClient                                   │
+│  └── PrecipitationSensorClient                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Project Structure
+
+```
+Weather/
+├── src/
+│   └── Weather/
+│       ├── BusinessLogic/           # Business logic with mapping
+│       ├── Clients/                 # HTTP clients for sensor services
+│       │   └── Models/              # Sensor response models
+│       ├── Controllers/             # API controllers
+│       ├── Models/                  # Public API models
+│       ├── Program.cs               # Application entry point with DI
+│       └── appsettings.json         # Configuration
+├── tests/
+│   └── Weather.Tests/
+│       └── BusinessLogic/           # Unit tests for business logic
+└── Weather.sln
+```
+
+## API Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/weather` | Returns combined weather data from all sensors |
+| `GET /api/temperature` | Returns current temperature data |
+| `GET /api/wind` | Returns current wind data |
+| `GET /api/precipitation` | Returns current precipitation data |
+
+## Models
+
+### Public API Models
+
+- **WeatherData**: Combined weather data with temperature, wind, and precipitation
+- **TemperatureData**: Temperature value, unit, and feels-like temperature
+- **WindData**: Wind speed, unit, direction (cardinal), and gusts
+- **PrecipitationData**: Precipitation amount, unit, type, and humidity
+
+### Sensor Response Models
+
+Internal models that map the raw JSON responses from sensor services:
+- **SensorTemperatureResponse**
+- **SensorWindResponse**  
+- **SensorPrecipitationResponse**
+
+## Configuration
+
+Configure sensor service URLs in `appsettings.json`:
+
+```json
+{
+  "SensorServices": {
+    "Temperature": {
+      "BaseUrl": "http://localhost:5001"
+    },
+    "Wind": {
+      "BaseUrl": "http://localhost:5002"
+    },
+    "Precipitation": {
+      "BaseUrl": "http://localhost:5003"
+    }
+  }
+}
+```
+
+## Building and Running
+
+### Prerequisites
+
+- .NET 9.0 SDK
+
+### Build
+
+```bash
+dotnet build Weather.sln
+```
+
+### Run Tests
+
+```bash
+dotnet test Weather.sln
+```
+
+### Run Application
+
+```bash
+dotnet run --project src/Weather/Weather.csproj
+```
+
+The API will be available at `https://localhost:5001` with Swagger UI at `/swagger`.
 
 ## Cline Workflows
 
-This project includes custom Cline workflows to automate common development tasks.
+This project includes Cline workflow automation:
 
-### Branch Checkout Workflow
+### Create a New Branch
 
-Create a new feature branch from the latest main branch, ready for development.
+Use `/checkout.md` to create a new feature branch:
+- Checks for uncommitted changes
+- Fetches latest from remote
+- Creates branch with proper naming convention
 
-**Usage:** Type `/checkout.md` in the Cline chat.
+### Create a Pull Request
 
-**What it does:**
+Use `/pullrequest.md` to create a PR:
+- Runs unit tests before PR creation
+- Auto-generates title and description
+- Creates PR via GitHub MCP
 
-1. **Pre-flight Checks**
-   - Verifies no uncommitted changes (prompts to stash/commit if found)
-   - Displays current branch for context
-   - Fetches latest from origin main
+## Technology Stack
 
-2. **Branch Creation**
-   - Prompts for branch type (`feature/`, `fix/`, `bugfix/`, `chore/`)
-   - Prompts for descriptive branch name
-   - Auto-formats name (lowercase, hyphens)
-   - Creates branch from latest origin/main
+- **Language**: C# 9.0+
+- **Framework**: ASP.NET Core 9.0
+- **Testing**: xUnit, Moq, FluentAssertions
+- **Documentation**: Swagger/OpenAPI
 
-3. **Ready for Development**
-   - Confirms new branch is active
-   - Branch remains local until PR workflow is used
+## License
 
-**Branch Naming Convention:**
-- `users/davhar/feature/<name>` - New features or enhancements
-- `users/davhar/fix/<name>` - Bug fixes
-- `users/davhar/bugfix/<name>` - Bug fixes (alternative)
-- `users/davhar/chore/<name>` - Maintenance tasks
-
----
-
-### Pull Request Workflow
-
-Create a pull request for the current feature branch with automated checks and PR generation.
-
-**Usage:** Type `/pullrequest.md` in the Cline chat.
-
-**What it does:**
-
-1. **Pre-flight Checks**
-   - Verifies no uncommitted changes (prompts to commit/stash if found)
-   - Confirms you're on a feature branch (not main)
-   - Checks if branch is up-to-date with main (prompts to rebase if behind)
-   - Runs unit tests (`dotnet test`) and aborts if tests fail
-
-2. **PR Generation**
-   - Auto-generates PR title from branch name
-   - Creates description with Summary, Changes, Testing sections
-   - Includes standard checklist items
-
-3. **PR Creation**
-   - Pushes branch to origin
-   - Creates PR via GitHub API targeting `main` branch
-   - Displays PR URL for easy access
-
-**Standard Checklist Items:**
-- [ ] Unit tests pass
-- [ ] Code has been self-reviewed
-- [ ] Documentation updated (if applicable)
-- [ ] No breaking changes introduced
+MIT License - see [LICENSE](LICENSE) file for details.

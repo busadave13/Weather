@@ -1,0 +1,38 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Weather", "src\Weather\Weather.csproj", "{E476E274-79E5-5216-0B0F-501F5FCE2BFB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Weather.Tests", "tests\Weather.Tests\Weather.Tests.csproj", "{517C10E6-9854-2873-7E63-CA0FC99F05D6}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E476E274-79E5-5216-0B0F-501F5FCE2BFB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E476E274-79E5-5216-0B0F-501F5FCE2BFB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E476E274-79E5-5216-0B0F-501F5FCE2BFB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E476E274-79E5-5216-0B0F-501F5FCE2BFB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{517C10E6-9854-2873-7E63-CA0FC99F05D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{517C10E6-9854-2873-7E63-CA0FC99F05D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{517C10E6-9854-2873-7E63-CA0FC99F05D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{517C10E6-9854-2873-7E63-CA0FC99F05D6}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{E476E274-79E5-5216-0B0F-501F5FCE2BFB} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{517C10E6-9854-2873-7E63-CA0FC99F05D6} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8511C5D1-07BE-4A23-A9EF-CB1CB7A39721}
+	EndGlobalSection
+EndGlobal
