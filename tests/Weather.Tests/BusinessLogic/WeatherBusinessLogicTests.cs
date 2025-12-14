@@ -27,6 +27,8 @@ public class WeatherBusinessLogicTests
             _mockPrecipClient.Object);
     }
 
+    #region GetCurrentWeatherAsync Tests
+
     [Fact]
     public async Task GetCurrentWeatherAsync_ShouldMapAllSensorResponsesCorrectly()
     {
@@ -197,6 +199,200 @@ public class WeatherBusinessLogicTests
         startIndices.Max().Should().BeLessThan(endIndices.Min());
     }
 
+    #endregion
+
+    #region GetTemperatureAsync Tests
+
+    [Fact]
+    public async Task GetTemperatureAsync_ShouldMapSensorResponseCorrectly()
+    {
+        // Arrange
+        var sensorResponse = new SensorTemperatureResponse
+        {
+            Temp = 72.5m,
+            TempUnit = "F",
+            ApparentTemp = 75.0m,
+            ReadingTime = DateTime.UtcNow
+        };
+
+        _mockTempClient
+            .Setup(x => x.GetTemperatureAsync())
+            .ReturnsAsync(sensorResponse);
+
+        // Act
+        var result = await _sut.GetTemperatureAsync();
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Value.Should().Be(72.5m);
+        result.Unit.Should().Be("F");
+        result.FeelsLike.Should().Be(75.0m);
+    }
+
+    [Fact]
+    public async Task GetTemperatureAsync_ShouldCallClientOnce()
+    {
+        // Arrange
+        _mockTempClient
+            .Setup(x => x.GetTemperatureAsync())
+            .ReturnsAsync(new SensorTemperatureResponse
+            {
+                Temp = 72.5m,
+                TempUnit = "F",
+                ApparentTemp = 75.0m,
+                ReadingTime = DateTime.UtcNow
+            });
+
+        // Act
+        await _sut.GetTemperatureAsync();
+
+        // Assert
+        _mockTempClient.Verify(x => x.GetTemperatureAsync(), Times.Once);
+    }
+
+    #endregion
+
+    #region GetWindAsync Tests
+
+    [Fact]
+    public async Task GetWindAsync_ShouldMapSensorResponseCorrectly()
+    {
+        // Arrange
+        var sensorResponse = new SensorWindResponse
+        {
+            WindSpeed = 15.5m,
+            SpeedUnit = "mph",
+            WindDirection = 90,
+            GustSpeed = 22.0m,
+            ReadingTime = DateTime.UtcNow
+        };
+
+        _mockWindClient
+            .Setup(x => x.GetWindAsync())
+            .ReturnsAsync(sensorResponse);
+
+        // Act
+        var result = await _sut.GetWindAsync();
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Speed.Should().Be(15.5m);
+        result.Unit.Should().Be("mph");
+        result.Direction.Should().Be("E"); // 90 degrees = East
+        result.Gusts.Should().Be(22.0m);
+    }
+
+    [Fact]
+    public async Task GetWindAsync_ShouldCallClientOnce()
+    {
+        // Arrange
+        _mockWindClient
+            .Setup(x => x.GetWindAsync())
+            .ReturnsAsync(new SensorWindResponse
+            {
+                WindSpeed = 15.5m,
+                SpeedUnit = "mph",
+                WindDirection = 90,
+                GustSpeed = 22.0m,
+                ReadingTime = DateTime.UtcNow
+            });
+
+        // Act
+        await _sut.GetWindAsync();
+
+        // Assert
+        _mockWindClient.Verify(x => x.GetWindAsync(), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(0, "N")]
+    [InlineData(45, "NE")]
+    [InlineData(90, "E")]
+    [InlineData(135, "SE")]
+    [InlineData(180, "S")]
+    [InlineData(225, "SW")]
+    [InlineData(270, "W")]
+    [InlineData(315, "NW")]
+    [InlineData(360, "N")]
+    public async Task GetWindAsync_ShouldMapDirectionToCardinal(int degrees, string expectedCardinal)
+    {
+        // Arrange
+        _mockWindClient
+            .Setup(x => x.GetWindAsync())
+            .ReturnsAsync(new SensorWindResponse
+            {
+                WindSpeed = 10m,
+                SpeedUnit = "mph",
+                WindDirection = degrees,
+                GustSpeed = 15m,
+                ReadingTime = DateTime.UtcNow
+            });
+
+        // Act
+        var result = await _sut.GetWindAsync();
+
+        // Assert
+        result.Direction.Should().Be(expectedCardinal);
+    }
+
+    #endregion
+
+    #region GetPrecipitationAsync Tests
+
+    [Fact]
+    public async Task GetPrecipitationAsync_ShouldMapSensorResponseCorrectly()
+    {
+        // Arrange
+        var sensorResponse = new SensorPrecipitationResponse
+        {
+            PrecipAmount = 0.25m,
+            PrecipUnit = "in",
+            PrecipType = "rain",
+            RelativeHumidity = 85,
+            ReadingTime = DateTime.UtcNow
+        };
+
+        _mockPrecipClient
+            .Setup(x => x.GetPrecipitationAsync())
+            .ReturnsAsync(sensorResponse);
+
+        // Act
+        var result = await _sut.GetPrecipitationAsync();
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Amount.Should().Be(0.25m);
+        result.Unit.Should().Be("in");
+        result.Type.Should().Be("rain");
+        result.Humidity.Should().Be(85);
+    }
+
+    [Fact]
+    public async Task GetPrecipitationAsync_ShouldCallClientOnce()
+    {
+        // Arrange
+        _mockPrecipClient
+            .Setup(x => x.GetPrecipitationAsync())
+            .ReturnsAsync(new SensorPrecipitationResponse
+            {
+                PrecipAmount = 0.25m,
+                PrecipUnit = "in",
+                PrecipType = "rain",
+                RelativeHumidity = 85,
+                ReadingTime = DateTime.UtcNow
+            });
+
+        // Act
+        await _sut.GetPrecipitationAsync();
+
+        // Assert
+        _mockPrecipClient.Verify(x => x.GetPrecipitationAsync(), Times.Once);
+    }
+
+    #endregion
+
+    #region Helper Methods
+
     private void SetupDefaultMockResponses()
     {
         _mockTempClient
@@ -231,4 +427,6 @@ public class WeatherBusinessLogicTests
                 ReadingTime = DateTime.UtcNow
             });
     }
+
+    #endregion
 }

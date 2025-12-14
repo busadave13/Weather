@@ -57,9 +57,6 @@ builder.Services.AddHttpClient<IPrecipitationSensorClient, PrecipitationSensorCl
 .AddHttpMessageHandler<MockeryHandler>();
 
 // Register business logic services
-builder.Services.AddScoped<ITemperatureBusinessLogic, TemperatureBusinessLogic>();
-builder.Services.AddScoped<IWindBusinessLogic, WindBusinessLogic>();
-builder.Services.AddScoped<IPrecipitationBusinessLogic, PrecipitationBusinessLogic>();
 builder.Services.AddScoped<IWeatherBusinessLogic, WeatherBusinessLogic>();
 
 var app = builder.Build();

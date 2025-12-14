@@ -5,7 +5,7 @@ using Weather.Models;
 namespace Weather.BusinessLogic;
 
 /// <summary>
-/// Business logic implementation for combined weather operations.
+/// Business logic implementation for weather operations.
 /// </summary>
 public class WeatherBusinessLogic : IWeatherBusinessLogic
 {
@@ -47,6 +47,27 @@ public class WeatherBusinessLogic : IWeatherBusinessLogic
             Precipitation = MapToPrecipitationData(await precipTask),
             Timestamp = DateTime.UtcNow
         };
+    }
+
+    /// <inheritdoc />
+    public async Task<TemperatureData> GetTemperatureAsync()
+    {
+        var response = await _temperatureClient.GetTemperatureAsync();
+        return MapToTemperatureData(response);
+    }
+
+    /// <inheritdoc />
+    public async Task<WindData> GetWindAsync()
+    {
+        var response = await _windClient.GetWindAsync();
+        return MapToWindData(response);
+    }
+
+    /// <inheritdoc />
+    public async Task<PrecipitationData> GetPrecipitationAsync()
+    {
+        var response = await _precipitationClient.GetPrecipitationAsync();
+        return MapToPrecipitationData(response);
     }
 
     private static TemperatureData MapToTemperatureData(SensorTemperatureResponse source)

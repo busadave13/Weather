@@ -5,11 +5,11 @@ meta {
 }
 
 get {
-  url: http://{{host}}/api/temperature
+  url: http://{{host}}/api/weather
   body: none
   auth: none
 }
 
 headers {
-  X-Mock-ID: weather/temperature
+  X-Mock-ID: weather/temperature, weather/wind, weather/precipitation
 }

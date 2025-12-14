@@ -44,9 +44,9 @@ We need a Weather Web API service that provides current weather information to c
 | ID | Requirement | Priority |
 |----|-------------|----------|
 | FR-1 | `GET api/weather` returns combined weather data (temperature, wind, precipitation) | High |
-| FR-2 | `GET api/temperature` returns current temperature data | High |
-| FR-3 | `GET api/wind` returns current wind conditions | High |
-| FR-4 | `GET api/precipitation` returns current precipitation data | High |
+| FR-2 | `GET api/weather/temperature` returns current temperature data | High |
+| FR-3 | `GET api/weather/wind` returns current wind conditions | High |
+| FR-4 | `GET api/weather/precipitation` returns current precipitation data | High |
 | FR-5 | All endpoints return JSON responses | High |
 | FR-6 | Service calls external sensor services for data | High |
 
@@ -74,16 +74,10 @@ flowchart TB
     subgraph Weather Service
         subgraph API Layer
             WC[WeatherController]
-            TC[TemperatureController]
-            WiC[WindController]
-            PC[PrecipitationController]
         end
         
         subgraph Business Logic
             WBL[WeatherBusinessLogic]
-            TBL[TemperatureBusinessLogic]
-            WiBL[WindBusinessLogic]
-            PBL[PrecipitationBusinessLogic]
         end
         
         subgraph Sensor Clients
@@ -98,21 +92,12 @@ flowchart TB
     end
     
     Client --> WC
-    Client --> TC
-    Client --> WiC
-    Client --> PC
     
     WC --> WBL
-    TC --> TBL
-    WiC --> WiBL
-    PC --> PBL
     
     WBL --> TSC
     WBL --> WSC
     WBL --> PSC
-    TBL --> TSC
-    WiBL --> WSC
-    PBL --> PSC
     
     TSC --> Mock
     WSC --> Mock
@@ -245,27 +230,9 @@ classDiagram
     class IWeatherBusinessLogic {
         <<interface>>
         +Task~WeatherData~ GetCurrentWeatherAsync()
-    }
-    
-    class ITemperatureBusinessLogic {
-        <<interface>>
-        +Task~TemperatureData~ GetCurrentTemperatureAsync()
-    }
-    
-    class IWindBusinessLogic {
-        <<interface>>
-        +Task~WindData~ GetCurrentWindAsync()
-    }
-    
-    class IPrecipitationBusinessLogic {
-        <<interface>>
-        +Task~PrecipitationData~ GetCurrentPrecipitationAsync()
-    }
-    
-    class TemperatureBusinessLogic {
-        -ITemperatureSensorClient _sensorClient
-        +Task~TemperatureData~ GetCurrentTemperatureAsync()
-        -TemperatureData MapToTemperatureData(SensorTemperatureResponse)
+        +Task~TemperatureData~ GetTemperatureAsync()
+        +Task~WindData~ GetWindAsync()
+        +Task~PrecipitationData~ GetPrecipitationAsync()
     }
     
     class WeatherBusinessLogic {
@@ -273,13 +240,15 @@ classDiagram
         -IWindSensorClient _windClient
         -IPrecipitationSensorClient _precipitationClient
         +Task~WeatherData~ GetCurrentWeatherAsync()
+        +Task~TemperatureData~ GetTemperatureAsync()
+        +Task~WindData~ GetWindAsync()
+        +Task~PrecipitationData~ GetPrecipitationAsync()
         -TemperatureData MapToTemperatureData(SensorTemperatureResponse)
         -WindData MapToWindData(SensorWindResponse)
         -PrecipitationData MapToPrecipitationData(SensorPrecipitationResponse)
     }
     
     IWeatherBusinessLogic <|.. WeatherBusinessLogic
-    ITemperatureBusinessLogic <|.. TemperatureBusinessLogic
 ```
 
 ### Manual Mapping Implementation
@@ -571,7 +540,7 @@ sequenceDiagram
 }
 ```
 
-### GET /api/temperature
+### GET /api/weather/temperature
 
 **Response (200 OK):**
 ```json
@@ -582,7 +551,7 @@ sequenceDiagram
 }
 ```
 
-### GET /api/wind
+### GET /api/weather/wind
 
 **Response (200 OK):**
 ```json
@@ -594,7 +563,7 @@ sequenceDiagram
 }
 ```
 
-### GET /api/precipitation
+### GET /api/weather/precipitation
 
 **Response (200 OK):**
 ```json
@@ -1056,24 +1025,18 @@ Weather/
 ├── src/
 │   └── Weather/
 │       ├── Controllers/
-│       │   ├── WeatherController.cs
-│       │   ├── TemperatureController.cs
-│       │   ├── WindController.cs
-│       │   └── PrecipitationController.cs
+│       │   └── WeatherController.cs             # All weather endpoints
 │       ├── BusinessLogic/
-│       │   ├── IWeatherBusinessLogic.cs
-│       │   ├── WeatherBusinessLogic.cs
-│       │   ├── ITemperatureBusinessLogic.cs
-│       │   ├── TemperatureBusinessLogic.cs
-│       │   ├── IWindBusinessLogic.cs
-│       │   ├── WindBusinessLogic.cs
-│       │   ├── IPrecipitationBusinessLogic.cs
-│       │   └── PrecipitationBusinessLogic.cs
+│       │   ├── IWeatherBusinessLogic.cs         # Interface with all methods
+│       │   └── WeatherBusinessLogic.cs          # Implementation with all methods
 │       ├── Clients/
 │       │   ├── Models/                          # Sensor models (internal)
 │       │   │   ├── SensorTemperatureResponse.cs
 │       │   │   ├── SensorWindResponse.cs
 │       │   │   └── SensorPrecipitationResponse.cs
+│       │   ├── Handlers/
+│       │   │   ├── MockeryHandler.cs            # DelegatingHandler for Mockery
+│       │   │   └── MockeryHandlerOptions.cs     # Configuration options
 │       │   ├── ITemperatureSensorClient.cs
 │       │   ├── TemperatureSensorClient.cs
 │       │   ├── IWindSensorClient.cs
@@ -1089,8 +1052,8 @@ Weather/
 │       └── appsettings.json
 ├── tests/
 │   └── Weather.Tests/
-│       ├── BusinessLogic/
-│       └── Controllers/
+│       └── BusinessLogic/
+│           └── WeatherBusinessLogicTests.cs     # All business logic tests
 └── mocks/
     └── Sensors/
         ├── temperature.json

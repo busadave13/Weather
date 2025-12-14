@@ -1,0 +1,15 @@
+meta {
+  name: temperature
+  type: http
+  seq: 2
+}
+
+get {
+  url: http://{{host}}/api/weather/temperature
+  body: none
+  auth: none
+}
+
+headers {
+  X-Mock-ID: weather/temperature
+}

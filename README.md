@@ -17,14 +17,16 @@ This project demonstrates a clean architecture pattern for a weather service tha
 │                    Weather API                          │
 ├─────────────────────────────────────────────────────────┤
 │  Controllers                                            │
-│  ├── WeatherController (combined data)                  │
-│  ├── TemperatureController                              │
-│  ├── WindController                                     │
-│  └── PrecipitationController                            │
+│  └── WeatherController                                  │
+│      ├── GET /api/weather (combined data)               │
+│      ├── GET /api/weather/temperature                   │
+│      ├── GET /api/weather/wind                          │
+│      └── GET /api/weather/precipitation                 │
 ├─────────────────────────────────────────────────────────┤
 │  Business Logic Layer                                   │
-│  ├── Maps sensor responses to API models                │
-│  └── Orchestrates parallel sensor calls                 │
+│  └── WeatherBusinessLogic                               │
+│      ├── Maps sensor responses to API models            │
+│      └── Orchestrates parallel sensor calls             │
 ├─────────────────────────────────────────────────────────┤
 │  Clients Layer                                          │
 │  ├── TemperatureSensorClient                            │
@@ -57,9 +59,9 @@ Weather/
 | Endpoint | Description |
 |----------|-------------|
 | `GET /api/weather` | Returns combined weather data from all sensors |
-| `GET /api/temperature` | Returns current temperature data |
-| `GET /api/wind` | Returns current wind data |
-| `GET /api/precipitation` | Returns current precipitation data |
+| `GET /api/weather/temperature` | Returns current temperature data |
+| `GET /api/weather/wind` | Returns current wind data |
+| `GET /api/weather/precipitation` | Returns current precipitation data |
 
 ## Models
 
