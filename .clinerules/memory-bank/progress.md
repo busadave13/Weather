@@ -2,6 +2,14 @@
 
 ## Completed Work
 
+### ✅ MockeryHandler Header Fix (2025-12-14)
+- [x] Debugged 503 errors from Mockery service
+- [x] Identified root cause: `TryAddWithoutValidation()` silently failing
+- [x] Changed to `Headers.Add()` for reliable header addition
+- [x] Added diagnostic logging for header verification
+- [x] Fixed Helm chart Mockery URL (mockery-svc:80 instead of mockery:8080)
+- [x] All 74 unit tests passing
+
 ### ✅ Health Check Counter Refactoring (2025-12-14)
 - [x] Removed `RequestCounterMiddleware` - no longer needed
 - [x] `ReadyHealthCheck` now increments counter via `IncrementAndGet()`

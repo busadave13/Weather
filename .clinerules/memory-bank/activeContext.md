@@ -1,11 +1,24 @@
 # Active Context: Weather
 
 ## Current Session Focus
-Health check counter refactoring and CI/CD documentation updates.
+MockeryHandler debugging and Helm chart configuration fixes.
 
 ## Recent Changes
 
 ### Session: 2025-12-14 (Latest)
+1. **Fixed MockeryHandler Header Issue**
+   - Debugged issue where Mockery service was returning 503
+   - Root cause: `TryAddWithoutValidation()` was silently failing to add header
+   - Fix: Changed to `Headers.Add()` for reliable header addition
+   - Added diagnostic logging to verify header presence
+   - All 74 unit tests passing
+
+2. **Fixed Helm Chart Mockery URL**
+   - Corrected service name from `mockery` to `mockery-svc`
+   - Corrected port from `8080` to `80`
+   - Updated URL: `http://mockery-svc.mockery.svc.cluster.local:80`
+
+### Session: 2025-12-14 (Previous)
 1. **Refactored Request Counter to Health Checks**
    - Removed `RequestCounterMiddleware` - no longer needed
    - `ReadyHealthCheck` now increments counter on each call via `IncrementAndGet()`
