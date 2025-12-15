@@ -1,11 +1,31 @@
 # Active Context: Weather
 
 ## Current Session Focus
-Load Shedding middleware implementation for rate-based request rejection.
+Health check counter refactoring and CI/CD documentation updates.
 
 ## Recent Changes
 
 ### Session: 2025-12-14 (Latest)
+1. **Refactored Request Counter to Health Checks**
+   - Removed `RequestCounterMiddleware` - no longer needed
+   - `ReadyHealthCheck` now increments counter on each call via `IncrementAndGet()`
+   - `LiveHealthCheck` now increments counter on each call via `IncrementAndGet()`
+   - Counter increments each time health check endpoints are called
+   - Updated unit tests to verify counter increment behavior
+
+2. **Updated CI/CD Documentation**
+   - Updated `.github/PUBLISH.md` to reflect actual Weather project configuration
+   - Changed from Docker Hub to GitHub Container Registry (ghcr.io)
+   - Updated username from `davhar` to `busadave13`
+   - Added GitVersion documentation for semantic versioning
+   - Added troubleshooting and best practices sections
+
+3. **Added Helm Charts and GitHub Workflow**
+   - `charts/weather/` - Kubernetes Helm chart
+   - `.github/workflows/publish-docker-helm.yml` - CI/CD pipeline
+   - Publishes Docker images and Helm charts to ghcr.io
+
+### Previous Session: 2025-12-14
 1. **Implemented Load Shedding Middleware**
    - Created `LoadSheddingOptions` configuration class
    - Created `LoadSheddingMiddleware` with sliding window RPS tracking
@@ -13,51 +33,42 @@ Load Shedding middleware implementation for rate-based request rejection.
    - Added configuration section in `appsettings.json`
    - Added 17 comprehensive unit tests
 
-2. **Load Shedding Features**
-   - Configurable RPS threshold to trigger shedding
-   - Configurable failure percentage (0-100%)
-   - Configurable HTTP status code for rejected requests
-   - Configurable sliding window duration
-   - Applies to all `/api/weather` endpoints (case-insensitive)
-   - Structured logging for monitoring
-
-### Previous Session: 2025-12-14
-1. **Created MockeryHandler with service-specific mocking**
-   - Added `ServiceName` property to identify which downstream service the handler is for
-   - Implemented `X-Mockery-Mocks` header parsing with comma-delimited mock list
-   - Matches mocks by first segment (e.g., "wind/prod/success" matches "WindSensor")
-   - Random selection when multiple mocks match the same service
-   - Routes matched requests to Mockery service with `X-Mockery-Mock` header
-
-2. **Created MockeryHandlerFactory**
-   - Factory pattern for creating service-specific handlers
-   - Registered as singleton in DI container
-
-3. **Simplified MockeryHandler**
-   - Removed `X-Mock-ID` header parsing from incoming requests
-   - Now only uses `X-Mockery-Mocks` header for mock selection
-   - `X-Mockery-Mock` header used when calling Mockery service
-
-4. **Added comprehensive unit tests**
-   - 13 tests covering constructor, header parsing, random selection, edge cases
+2. **Implemented Health Checks**
+   - `LiveHealthCheck` - Liveness probe with grace period
+   - `ReadyHealthCheck` - Readiness probe based on request count threshold
+   - `StartupHealthCheck` - Startup probe
+   - `RequestCounter` - Thread-safe counter using Interlocked
 
 ### Previous Session: 2024-12-14
+- Created MockeryHandler with service-specific mocking
+- Created MockeryHandlerFactory for creating handlers per HttpClient
 - Created PR and checkout workflows
 - Initialized memory-bank
 
 ## Active Decisions
+- **Health checks increment counter directly** - No middleware needed
 - **Load Shedding disabled by default** - Must set `Enabled: true` to activate
-- **MockeryHandler uses only `X-Mockery-Mocks` header** - no `X-Mock-ID` parsing from incoming requests
-- **Service matching uses `Contains` with case-insensitive comparison**
-- **Random selection** when multiple mocks match the same ServiceName
+- **CI/CD uses GitHub Container Registry** - ghcr.io/busadave13/weather
 
 ## Current State
-- Load shedding middleware fully implemented and tested (17 tests)
-- MockeryHandler fully implemented and tested
-- Factory pattern in place for service-specific handlers
-- Three sensor clients registered: TemperatureSensor, WindSensor, PrecipitationSensor
+- 74 unit tests passing
+- Health checks increment counter on each call
+- Load shedding middleware fully implemented
+- MockeryHandler fully implemented
+- CI/CD pipeline ready for PR merge
 
 ## Architecture
+
+### Health Check Counter Flow
+```
+/health/ready or /health/live called
+    ↓
+Health check class increments counter
+    ↓
+Counter value compared against threshold
+    ↓
+Return Healthy or Unhealthy based on threshold
+```
 
 ### Load Shedding Flow
 ```
@@ -69,46 +80,36 @@ Calculate current RPS
     ↓
 RPS <= Threshold? → Continue to Controller
     ↓
-RPS > Threshold
-    ↓
-Random(0-100) >= FailurePercentage? → Continue to Controller
-    ↓
-Random(0-100) < FailurePercentage → Return FailureStatusCode (503)
-```
-
-### MockeryHandler Flow
-```
-Incoming Request with X-Mockery-Mocks header
-    ↓
-MockeryHandler (service-specific, e.g., "WindSensor")
-    ↓
-Parse header → Find matching mock by first segment
-    ↓
-Match found? → Call Mockery with X-Mockery-Mock header
-No match?   → Call real downstream service
+RPS > Threshold → Apply failure percentage logic
 ```
 
 ## Configuration Example
 ```json
 {
+  "HealthCheck": {
+    "RequestCountThreshold": 1000,
+    "LiveGracePeriodRequests": 100
+  },
   "LoadShedding": {
     "Enabled": true,
     "RpsThreshold": 100,
     "FailurePercentage": 25,
-    "FailureStatusCode": 503,
-    "WindowDurationSeconds": 1
+    "FailureStatusCode": 503
   }
 }
 ```
 
-## Usage Example
+## CI/CD Artifacts
 ```bash
-curl -H "X-Mockery-Mocks: windsensor/success, temperaturesensor/success, precipitationsensor/success" \
-     http://localhost:5081/api/weather
+# Docker Image
+docker pull ghcr.io/busadave13/weather:latest
+
+# Helm Chart
+helm install weather oci://ghcr.io/busadave13/helm/weather --version 1.0.0
 ```
 
 ## Important Patterns
+- **Health Check Counter**: Counter incremented directly in health check classes
 - **Load Shedding**: Middleware pattern with sliding window counter for RPS tracking
-- Each HttpClient gets its own MockeryHandler via factory
-- Service names are registered in Program.cs (e.g., "TemperatureSensor", "WindSensor")
-- Mock identifiers use format: `<service-prefix>/<path>` (e.g., "wind/prod/success")
+- **MockeryHandler**: DelegatingHandler pattern for HTTP interception
+- **Factory Pattern**: MockeryHandlerFactory for service-specific handlers

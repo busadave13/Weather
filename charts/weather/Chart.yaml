@@ -1,0 +1,25 @@
+apiVersion: v2
+name: Weather
+description: A Helm chart for weather
+type: application
+version: 0.1.32
+appVersion: "0.1.32"
+keywords:
+  - weather
+  - api
+  - testing
+  - rest
+  - git
+home: https://github.com/busadave13/Weather
+sources:
+  - https://github.com/busadave13/Weather
+icon: https://raw.githubusercontent.com/busadave13/Weather/main/.github/assets/icon.png
+maintainers:
+  - name: Dave Harding
+    url: https://github.com/busadave13
+annotations:
+  artifacthub.io/category: integration-delivery
+  artifacthub.io/displayName: Weather
+  artifacthub.io/license: MIT
+  artifacthub.io/links: |
+    - name: GitHub Container Registry

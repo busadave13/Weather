@@ -1,0 +1,11 @@
+meta {
+  name: ready
+  type: http
+  seq: 6
+}
+
+get {
+  url: http://{{host}}/health/ready
+  body: none
+  auth: none
+}
