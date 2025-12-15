@@ -6,20 +6,20 @@ using Microsoft.Extensions.Options;
 namespace Weather.Clients.Handlers;
 
 /// <summary>
-/// A delegating handler that propagates the X-Mock-ID header from incoming requests
-/// and routes requests to the Mockery service when the header is present.
+/// A delegating handler that routes requests to the Mockery service based on the X-Mockery-Mocks header.
 /// </summary>
 /// <remarks>
-/// This handler is self-contained and combines header propagation with mock routing.
-/// It uses IHttpClientFactory to create its own HttpClient for calling the Mockery service.
+/// This handler uses the X-Mockery-Mocks header to determine which mock to use for each service.
+/// The header contains a comma-delimited list of mock identifiers, each with the service name as
+/// the first segment (e.g., "wind/prod/success,temperature/dev/error").
 /// 
 /// When processing an outgoing request, this handler will:
-/// 1. Check the incoming HTTP request (via IHttpContextAccessor) for the X-Mock-ID header
-/// 2. If present, propagate the header to the outgoing request
-/// 3. Route the request to the Mockery service instead of the original endpoint
+/// 1. Check the incoming HTTP request for the X-Mockery-Mocks header
+/// 2. Parse the header and find a mock that matches this handler's ServiceName
+/// 3. If a match is found, route the request to the Mockery service with X-Mockery-Mock header
 /// 4. Return the mocked response from the Mockery service
 /// 
-/// If the X-Mock-ID header is not present, the request proceeds normally to the next handler.
+/// If no matching mock is found, the request proceeds normally to the real service.
 /// </remarks>
 public class MockeryHandler : DelegatingHandler
 {
@@ -29,9 +29,17 @@ public class MockeryHandler : DelegatingHandler
     private readonly MockeryHandlerOptions _options;
 
     /// <summary>
-    /// The name of the header that triggers mock routing.
+    /// The name of the header used when calling the Mockery service to identify which mock to return.
+    /// This header is set by the handler when routing requests to Mockery.
     /// </summary>
-    public const string MockIdHeaderName = "X-Mock-ID";
+    public const string MockIdHeaderName = "X-Mockery-Mock";
+
+    /// <summary>
+    /// The name of the header that contains a comma-delimited list of mock identifiers.
+    /// Each mock identifier should have the service name as the first segment (e.g., "wind/prod/success").
+    /// The handler will match mocks based on the ServiceName and randomly select one if multiple match.
+    /// </summary>
+    public const string MockeryMocksHeaderName = "X-Mockery-Mocks";
 
     /// <summary>
     /// The name of the HttpClient used to call the Mockery service.
@@ -44,19 +52,27 @@ public class MockeryHandler : DelegatingHandler
     private const string MockApiPath = "api/mock";
 
     /// <summary>
+    /// Gets the name of the downstream service this handler is configured for.
+    /// </summary>
+    public string ServiceName { get; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="MockeryHandler"/> class.
     /// </summary>
+    /// <param name="serviceName">The name of the downstream service this handler is configured for.</param>
     /// <param name="httpClientFactory">The HTTP client factory for creating clients.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor to read incoming request headers.</param>
     /// <param name="logger">The logger instance for this handler.</param>
     /// <param name="options">The configuration options for this handler.</param>
     /// <exception cref="ArgumentNullException">Thrown when any parameter is null.</exception>
     public MockeryHandler(
+        string serviceName,
         IHttpClientFactory httpClientFactory,
         IHttpContextAccessor httpContextAccessor,
         ILogger<MockeryHandler> logger,
         IOptions<MockeryHandlerOptions> options)
     {
+        ServiceName = serviceName ?? throw new ArgumentNullException(nameof(serviceName));
         _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
         _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -65,7 +81,7 @@ public class MockeryHandler : DelegatingHandler
     }
 
     /// <summary>
-    /// Sends an HTTP request after propagating the X-Mock-ID header and routing to Mockery if present.
+    /// Sends an HTTP request, routing to Mockery service if a matching mock is found in X-Mockery-Mocks header.
     /// </summary>
     /// <param name="request">The HTTP request message to send.</param>
     /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
@@ -83,70 +99,130 @@ public class MockeryHandler : DelegatingHandler
             return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
         }
 
-        // Step 1: Propagate X-Mock-ID header from incoming request to outgoing request
-        var mockId = PropagateAndGetMockIdHeader(request);
+        // Check X-Mockery-Mocks header for service-specific mock
+        var mockId = GetMockIdFromMocksList();
 
-        // Step 2: If X-Mock-ID is present, route to Mockery service
+        // If a mock ID was found, route to Mockery service
         if (!string.IsNullOrWhiteSpace(mockId))
         {
             _logger.LogInformation(
-                "Intercepted request with {HeaderName}: {MockId}. Routing to Mockery service.",
-                MockIdHeaderName,
+                "Intercepted request for service '{ServiceName}' with MockId: {MockId}. Routing to Mockery service.",
+                ServiceName,
                 mockId);
 
             return await CallMockeryServiceAsync(request, mockId, cancellationToken)
                 .ConfigureAwait(false);
         }
 
-        // No X-Mock-ID header present, proceed with normal request pipeline
-        _logger.LogDebug("No {HeaderName} header found. Proceeding with normal request pipeline.", MockIdHeaderName);
+        // No mock routing applicable, proceed with normal request pipeline
+        _logger.LogDebug(
+            "No mock ID found for service '{ServiceName}'. Proceeding with normal request pipeline.",
+            ServiceName);
 
         return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// Propagates the X-Mock-ID header from the incoming HTTP request to the outgoing request
-    /// and returns the mock ID value.
+    /// Gets the mock ID from the X-Mockery-Mocks header by matching the first segment
+    /// of each mock identifier against the ServiceName.
     /// </summary>
-    /// <param name="request">The outgoing HTTP request to add the header to.</param>
-    /// <returns>The mock ID value if present, null otherwise.</returns>
-    private string? PropagateAndGetMockIdHeader(HttpRequestMessage request)
+    /// <returns>
+    /// The matched mock ID if found, null otherwise. If multiple mocks match,
+    /// one is randomly selected.
+    /// </returns>
+    private string? GetMockIdFromMocksList()
     {
-        // First check if header is already on the outgoing request
-        if (request.Headers.TryGetValues(MockIdHeaderName, out var existingValues))
-        {
-            var existingValue = existingValues.FirstOrDefault();
-            if (!string.IsNullOrWhiteSpace(existingValue))
-            {
-                _logger.LogDebug("Header {HeaderName} already present on outgoing request", MockIdHeaderName);
-                return existingValue;
-            }
-        }
-
-        // Try to get the header from the incoming HTTP context
         var httpContext = _httpContextAccessor.HttpContext;
         if (httpContext == null)
         {
-            _logger.LogDebug("No HttpContext available for header propagation");
+            _logger.LogDebug("No HttpContext available for {HeaderName} header lookup", MockeryMocksHeaderName);
             return null;
         }
 
-        if (httpContext.Request.Headers.TryGetValue(MockIdHeaderName, out var headerValue))
+        if (!httpContext.Request.Headers.TryGetValue(MockeryMocksHeaderName, out var headerValue))
         {
-            var value = headerValue.ToString();
-            if (!string.IsNullOrWhiteSpace(value))
-            {
-                // Add the header to the outgoing request
-                request.Headers.TryAddWithoutValidation(MockIdHeaderName, value);
-                _logger.LogDebug(
-                    "Propagated header {HeaderName}={HeaderValue} from incoming to outgoing request",
-                    MockIdHeaderName,
-                    value);
-                return value;
-            }
+            return null;
         }
 
-        return null;
+        var mocksList = headerValue.ToString();
+        if (string.IsNullOrWhiteSpace(mocksList))
+        {
+            return null;
+        }
+
+        var matchedMock = FindMatchingMockFromList(mocksList);
+        
+        if (matchedMock != null)
+        {
+            _logger.LogDebug(
+                "Found matching mock '{MatchedMock}' for service '{ServiceName}' from {HeaderName} header",
+                matchedMock,
+                ServiceName,
+                MockeryMocksHeaderName);
+        }
+        
+        return matchedMock;
+    }
+
+    /// <summary>
+    /// Parses a comma-delimited list of mock identifiers and finds mocks that match
+    /// the current ServiceName. The first segment of each mock (before the first '/')
+    /// is compared against the ServiceName using case-insensitive matching.
+    /// </summary>
+    /// <param name="mocksList">A comma-delimited list of mock identifiers (e.g., "wind/prod/success,temperature/dev/error").</param>
+    /// <returns>
+    /// A matching mock identifier if found, null otherwise.
+    /// If multiple mocks match the ServiceName, one is randomly selected.
+    /// </returns>
+    private string? FindMatchingMockFromList(string mocksList)
+    {
+        var mocks = mocksList.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        
+        // Collect ALL matching mocks
+        var matchingMocks = new List<string>();
+        
+        foreach (var mock in mocks)
+        {
+            // Get the first segment (before the first '/')
+            var separatorIndex = mock.IndexOf('/');
+            var firstSegment = separatorIndex >= 0 ? mock[..separatorIndex] : mock;
+            
+            // Case-insensitive comparison: check if ServiceName contains the first segment
+            if (ServiceName.Contains(firstSegment, StringComparison.OrdinalIgnoreCase))
+            {
+                matchingMocks.Add(mock);
+                _logger.LogDebug(
+                    "Mock '{Mock}' matches ServiceName '{ServiceName}' (first segment: '{FirstSegment}')",
+                    mock,
+                    ServiceName,
+                    firstSegment);
+            }
+        }
+        
+        if (matchingMocks.Count == 0)
+        {
+            _logger.LogDebug(
+                "No matching mocks found for ServiceName '{ServiceName}' in mocks list",
+                ServiceName);
+            return null;
+        }
+        
+        if (matchingMocks.Count == 1)
+        {
+            return matchingMocks[0];
+        }
+        
+        // Randomly select one when multiple mocks match
+        var randomIndex = Random.Shared.Next(matchingMocks.Count);
+        var selectedMock = matchingMocks[randomIndex];
+        
+        _logger.LogDebug(
+            "Multiple mocks matched ServiceName '{ServiceName}'. Randomly selected '{SelectedMock}' from {Count} matches",
+            ServiceName,
+            selectedMock,
+            matchingMocks.Count);
+        
+        return selectedMock;
     }
 
     /// <summary>

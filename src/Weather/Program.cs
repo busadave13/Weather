@@ -24,8 +24,8 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.Configure<MockeryHandlerOptions>(
     builder.Configuration.GetSection("Mockery"));
 
-// Register MockeryHandler as transient (DelegatingHandlers must be transient)
-builder.Services.AddTransient<MockeryHandler>();
+// Register MockeryHandlerFactory for creating service-specific handlers
+builder.Services.AddSingleton<IMockeryHandlerFactory, MockeryHandlerFactory>();
 
 // Register the MockeryClient HttpClient (used by MockeryHandler to call the mock service)
 builder.Services.AddHttpClient("MockeryClient", client =>
@@ -34,27 +34,27 @@ builder.Services.AddHttpClient("MockeryClient", client =>
         ?? "http://localhost:5000");
 });
 
-// Register HTTP clients for sensor services with MockeryHandler in the pipeline
+// Register HTTP clients for sensor services with service-specific MockeryHandlers
 builder.Services.AddHttpClient<ITemperatureSensorClient, TemperatureSensorClient>(client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["SensorServices:Temperature:BaseUrl"]
         ?? "http://localhost:5001");
 })
-.AddHttpMessageHandler<MockeryHandler>();
+.AddHttpMessageHandler(sp => sp.GetRequiredService<IMockeryHandlerFactory>().Create("TemperatureSensor"));
 
 builder.Services.AddHttpClient<IWindSensorClient, WindSensorClient>(client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["SensorServices:Wind:BaseUrl"]
         ?? "http://localhost:5002");
 })
-.AddHttpMessageHandler<MockeryHandler>();
+.AddHttpMessageHandler(sp => sp.GetRequiredService<IMockeryHandlerFactory>().Create("WindSensor"));
 
 builder.Services.AddHttpClient<IPrecipitationSensorClient, PrecipitationSensorClient>(client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["SensorServices:Precipitation:BaseUrl"]
         ?? "http://localhost:5003");
 })
-.AddHttpMessageHandler<MockeryHandler>();
+.AddHttpMessageHandler(sp => sp.GetRequiredService<IMockeryHandlerFactory>().Create("PrecipitationSensor"));
 
 // Register business logic services
 builder.Services.AddScoped<IWeatherBusinessLogic, WeatherBusinessLogic>();

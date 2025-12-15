@@ -1,49 +1,65 @@
 # Active Context: Weather
 
 ## Current Session Focus
-Setting up Cline workflow automation for the Weather project.
+MockeryHandler implementation and simplification for service-specific mocking.
 
 ## Recent Changes
 
-### Session: 2024-12-14
-1. **Created PR workflow** (`.clinerules/workflows/pullrequest.md`)
-   - Pre-flight checks: uncommitted changes, branch status, unit tests
-   - Auto-generates PR title and description
-   - Creates PR via GitHub MCP
+### Session: 2025-12-14 (Latest)
+1. **Created MockeryHandler with service-specific mocking**
+   - Added `ServiceName` property to identify which downstream service the handler is for
+   - Implemented `X-Mockery-Mocks` header parsing with comma-delimited mock list
+   - Matches mocks by first segment (e.g., "wind/prod/success" matches "WindSensor")
+   - Random selection when multiple mocks match the same service
+   - Routes matched requests to Mockery service with `X-Mockery-Mock` header
 
-2. **Created checkout workflow** (`.clinerules/workflows/checkout.md`)
-   - Pre-flight checks: uncommitted changes, fetch latest
-   - Branch type selection (feature, fix, bugfix, chore)
-   - Auto-formats branch names
+2. **Created MockeryHandlerFactory**
+   - Factory pattern for creating service-specific handlers
+   - Registered as singleton in DI container
 
-3. **Updated README.md**
-   - Documented both workflows with usage instructions
+3. **Simplified MockeryHandler**
+   - Removed `X-Mock-ID` header parsing from incoming requests
+   - Now only uses `X-Mockery-Mocks` header for mock selection
+   - `X-Mockery-Mock` header used when calling Mockery service
 
-4. **Initialized memory-bank**
-   - Created project documentation structure
+4. **Added comprehensive unit tests**
+   - 13 tests covering constructor, header parsing, random selection, edge cases
+
+### Previous Session: 2024-12-14
+- Created PR and checkout workflows
+- Initialized memory-bank
 
 ## Active Decisions
-- Branch naming convention: `users/davhar/<type>/<name>` (lowercase, hyphens)
-- Base branch: `main`
-- Tests run before PR creation: `dotnet test`
-- Branch stays local until PR workflow is used
+- **MockeryHandler uses only `X-Mockery-Mocks` header** - no `X-Mock-ID` parsing from incoming requests
+- **Service matching uses `Contains` with case-insensitive comparison**
+- **Random selection** when multiple mocks match the same ServiceName
+- Handler disabled by default via `MockeryHandlerOptions.Enabled`
 
 ## Current State
-- Project is a skeleton with workflows defined
-- No application code implemented yet
-- Ready for feature development
+- MockeryHandler fully implemented and tested
+- Factory pattern in place for service-specific handlers
+- Three sensor clients registered: TemperatureSensor, WindSensor, PrecipitationSensor
 
-## Next Steps
-1. Implement Weather service functionality
-2. Add unit tests
-3. Configure GitHub Actions CI/CD
-4. Add Docker support
+## Architecture
 
-## Open Questions
-- None currently
+```
+Incoming Request with X-Mockery-Mocks header
+    ↓
+MockeryHandler (service-specific, e.g., "WindSensor")
+    ↓
+Parse header → Find matching mock by first segment
+    ↓
+Match found? → Call Mockery with X-Mockery-Mock header
+No match?   → Call real downstream service
+```
 
-## Important Patterns to Remember
-- Use `/checkout.md` to start new work
-- Use `/pullrequest.md` to create PRs
-- All branches should follow naming convention
-- Tests must pass before PR creation
+## Usage Example
+```bash
+curl -H "X-Mockery-Mocks: windsensor/success, temperaturesensor/success, precipitationsensor/success" \
+     http://localhost:5081/api/weather
+```
+
+## Important Patterns
+- Each HttpClient gets its own MockeryHandler via factory
+- Service names are registered in Program.cs (e.g., "TemperatureSensor", "WindSensor")
+- Mock identifiers use format: `<service-prefix>/<path>` (e.g., "wind/prod/success")

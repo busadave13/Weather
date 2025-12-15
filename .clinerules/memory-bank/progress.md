@@ -2,6 +2,27 @@
 
 ## Completed Work
 
+### ✅ MockeryHandler Implementation (2025-12-14)
+- [x] Created `MockeryHandler` delegating handler for service-specific mocking
+- [x] Created `MockeryHandlerFactory` for creating handlers per HttpClient
+- [x] Created `MockeryHandlerOptions` for configuration
+- [x] Registered handlers in Program.cs for all sensor clients
+- [x] Implemented `X-Mockery-Mocks` header parsing
+- [x] Removed `X-Mock-ID` header parsing (simplified design)
+- [x] Renamed header to `X-Mockery-Mock` for consistency
+- [x] Added 13 comprehensive unit tests
+
+### ✅ Core API Implementation (2024-12-14)
+- [x] Created Weather controller and endpoints
+- [x] Added business logic layer (WeatherBusinessLogic)
+- [x] Created sensor clients (Temperature, Wind, Precipitation)
+- [x] Created data models and DTOs
+
+### ✅ Testing Setup (2024-12-14)
+- [x] Set up xUnit test project
+- [x] Added unit tests for business logic
+- [x] Added unit tests for MockeryHandler
+
 ### ✅ Cline Workflow Setup (2024-12-14)
 - [x] Created `.clinerules/workflows/pullrequest.md`
 - [x] Created `.clinerules/workflows/checkout.md`
@@ -21,18 +42,6 @@
 
 ## Pending Work
 
-### 🔲 Application Development
-- [ ] Create ASP.NET Core Web API project structure
-- [ ] Implement Weather controller and endpoints
-- [ ] Add service layer with business logic
-- [ ] Create data models and DTOs
-
-### 🔲 Testing
-- [ ] Set up xUnit test project
-- [ ] Add unit tests for services
-- [ ] Add integration tests for API endpoints
-- [ ] Configure test coverage reporting
-
 ### 🔲 DevOps
 - [ ] Create Dockerfile
 - [ ] Set up GitHub Actions CI workflow
@@ -44,14 +53,19 @@
 - [ ] Create contributing guidelines
 - [ ] Add architecture decision records (ADRs)
 
+### 🔲 Integration Tests
+- [ ] Add integration tests for API endpoints
+- [ ] Configure test coverage reporting
+
 ## Known Issues
-- None currently
+- Pre-existing flaky test: `GetCurrentWeatherAsync_ShouldCallAllClientsInParallel` (timing-dependent)
 
 ## Milestones
 | Milestone | Status | Target Date |
 |-----------|--------|-------------|
 | Workflow Setup | ✅ Complete | 2024-12-14 |
 | Memory Bank Init | ✅ Complete | 2024-12-14 |
-| Core API | 🔲 Pending | TBD |
-| Testing | 🔲 Pending | TBD |
+| Core API | ✅ Complete | 2024-12-14 |
+| MockeryHandler | ✅ Complete | 2025-12-14 |
+| Testing | ✅ Complete | 2025-12-14 |
 | CI/CD | 🔲 Pending | TBD |
