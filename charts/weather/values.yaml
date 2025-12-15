@@ -1,4 +1,4 @@
-# Default values for mockery Helm chart
+# Default values for weather Helm chart
 
 name: weather
 namespace: weather

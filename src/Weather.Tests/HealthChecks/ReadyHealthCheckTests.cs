@@ -66,7 +66,7 @@ public class ReadyHealthCheckTests
     {
         // Arrange
         _options.RequestCountThreshold = 0;
-        _mockCounter.Setup(c => c.CurrentCount).Returns(1000);
+        _mockCounter.Setup(c => c.IncrementAndGet()).Returns(1000);
 
         var healthCheck = new ReadyHealthCheck(_mockCounter.Object, _mockOptions.Object, _mockLogger.Object);
 
@@ -76,6 +76,7 @@ public class ReadyHealthCheckTests
         // Assert
         result.Status.Should().Be(HealthStatus.Healthy);
         result.Description.Should().Contain("threshold disabled");
+        _mockCounter.Verify(c => c.IncrementAndGet(), Times.Once);
     }
 
     [Fact]
@@ -83,7 +84,7 @@ public class ReadyHealthCheckTests
     {
         // Arrange
         _options.RequestCountThreshold = -1;
-        _mockCounter.Setup(c => c.CurrentCount).Returns(1000);
+        _mockCounter.Setup(c => c.IncrementAndGet()).Returns(1000);
 
         var healthCheck = new ReadyHealthCheck(_mockCounter.Object, _mockOptions.Object, _mockLogger.Object);
 
@@ -93,6 +94,7 @@ public class ReadyHealthCheckTests
         // Assert
         result.Status.Should().Be(HealthStatus.Healthy);
         result.Description.Should().Contain("threshold disabled");
+        _mockCounter.Verify(c => c.IncrementAndGet(), Times.Once);
     }
 
     [Fact]
@@ -100,7 +102,7 @@ public class ReadyHealthCheckTests
     {
         // Arrange
         _options.RequestCountThreshold = 100;
-        _mockCounter.Setup(c => c.CurrentCount).Returns(50);
+        _mockCounter.Setup(c => c.IncrementAndGet()).Returns(50);
 
         var healthCheck = new ReadyHealthCheck(_mockCounter.Object, _mockOptions.Object, _mockLogger.Object);
 
@@ -110,6 +112,7 @@ public class ReadyHealthCheckTests
         // Assert
         result.Status.Should().Be(HealthStatus.Healthy);
         result.Description.Should().Be("Request count: 50/100");
+        _mockCounter.Verify(c => c.IncrementAndGet(), Times.Once);
     }
 
     [Fact]
@@ -117,7 +120,7 @@ public class ReadyHealthCheckTests
     {
         // Arrange
         _options.RequestCountThreshold = 100;
-        _mockCounter.Setup(c => c.CurrentCount).Returns(100);
+        _mockCounter.Setup(c => c.IncrementAndGet()).Returns(100);
 
         var healthCheck = new ReadyHealthCheck(_mockCounter.Object, _mockOptions.Object, _mockLogger.Object);
 
@@ -127,6 +130,7 @@ public class ReadyHealthCheckTests
         // Assert
         result.Status.Should().Be(HealthStatus.Unhealthy);
         result.Description.Should().Be("Request count 100 exceeded threshold 100");
+        _mockCounter.Verify(c => c.IncrementAndGet(), Times.Once);
     }
 
     [Fact]
@@ -134,7 +138,7 @@ public class ReadyHealthCheckTests
     {
         // Arrange
         _options.RequestCountThreshold = 100;
-        _mockCounter.Setup(c => c.CurrentCount).Returns(150);
+        _mockCounter.Setup(c => c.IncrementAndGet()).Returns(150);
 
         var healthCheck = new ReadyHealthCheck(_mockCounter.Object, _mockOptions.Object, _mockLogger.Object);
 
@@ -144,14 +148,15 @@ public class ReadyHealthCheckTests
         // Assert
         result.Status.Should().Be(HealthStatus.Unhealthy);
         result.Description.Should().Be("Request count 150 exceeded threshold 100");
+        _mockCounter.Verify(c => c.IncrementAndGet(), Times.Once);
     }
 
     [Fact]
-    public async Task CheckHealthAsync_WithZeroCount_ReturnsHealthy()
+    public async Task CheckHealthAsync_WithFirstCall_ReturnsHealthy()
     {
         // Arrange
         _options.RequestCountThreshold = 100;
-        _mockCounter.Setup(c => c.CurrentCount).Returns(0);
+        _mockCounter.Setup(c => c.IncrementAndGet()).Returns(1);
 
         var healthCheck = new ReadyHealthCheck(_mockCounter.Object, _mockOptions.Object, _mockLogger.Object);
 
@@ -160,6 +165,7 @@ public class ReadyHealthCheckTests
 
         // Assert
         result.Status.Should().Be(HealthStatus.Healthy);
-        result.Description.Should().Be("Request count: 0/100");
+        result.Description.Should().Be("Request count: 1/100");
+        _mockCounter.Verify(c => c.IncrementAndGet(), Times.Once);
     }
 }

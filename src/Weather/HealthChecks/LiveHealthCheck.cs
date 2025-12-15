@@ -37,9 +37,10 @@ public class LiveHealthCheck : IHealthCheck
         HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
+        // Increment counter for each health check call
+        var currentCount = _counter.IncrementAndGet();
         var threshold = _options.Value.RequestCountThreshold;
         var gracePeriod = _options.Value.LiveGracePeriodRequests;
-        var currentCount = _counter.CurrentCount;
         var liveThreshold = threshold + gracePeriod;
 
         _logger.LogDebug(

@@ -89,9 +89,6 @@ app.UseHttpsRedirection();
 // Apply load shedding before authorization and routing
 app.UseLoadShedding();
 
-// Count requests for health check monitoring
-app.UseMiddleware<RequestCounterMiddleware>();
-
 app.UseAuthorization();
 
 app.MapControllers();

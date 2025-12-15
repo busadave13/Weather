@@ -37,8 +37,9 @@ public class ReadyHealthCheck : IHealthCheck
         HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
+        // Increment counter for each health check call
+        var currentCount = _counter.IncrementAndGet();
         var threshold = _options.Value.RequestCountThreshold;
-        var currentCount = _counter.CurrentCount;
 
         _logger.LogDebug(
             "Ready health check: CurrentCount={CurrentCount}, Threshold={Threshold}",

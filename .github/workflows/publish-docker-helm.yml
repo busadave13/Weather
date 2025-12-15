@@ -56,7 +56,7 @@ jobs:
         run: dotnet build src/Weather/Weather.csproj -c Release --no-restore
 
       - name: Run tests
-        run: dotnet test src/Weather.Test/Weather.Test.csproj -c Release --verbosity normal
+        run: dotnet test src/Weather.Tests/Weather.Tests.csproj -c Release --verbosity normal
 
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v0.10.2
