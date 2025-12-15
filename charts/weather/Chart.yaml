@@ -2,8 +2,8 @@ apiVersion: v2
 name: weather
 description: A Helm chart for weather
 type: application
-version: 0.1.32
-appVersion: "0.1.32"
+version: 0.1.0
+appVersion: "0.1.0"
 keywords:
   - weather
   - api
