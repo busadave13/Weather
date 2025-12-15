@@ -254,11 +254,18 @@ public class MockeryHandler : DelegatingHandler
             var mockeryClient = _httpClientFactory.CreateClient(MockeryClientName);
 
             // Create the request to the Mockery service
-            using var mockeryRequest = new HttpRequestMessage(HttpMethod.Get, MockApiPath);
+            var mockeryRequest = new HttpRequestMessage(HttpMethod.Get, MockApiPath);
 
-            // Add the X-Mock-ID header
-            mockeryRequest.Headers.TryAddWithoutValidation(MockIdHeaderName, mockId);
-            _logger.LogDebug("Added header {HeaderName}: {HeaderValue} to Mockery request", MockIdHeaderName, mockId);
+            // Add the X-Mockery-Mock header - must add before sending
+            mockeryRequest.Headers.Add(MockIdHeaderName, mockId);
+            var headerAdded = mockeryRequest.Headers.Contains(MockIdHeaderName);
+            _logger.LogInformation("Header add result - {HeaderName}: {HeaderValue}, Success: {Success}", MockIdHeaderName, mockId, headerAdded);
+            
+            // Log all request headers for debugging
+            foreach (var header in mockeryRequest.Headers)
+            {
+                _logger.LogInformation("Request header: {Name} = {Value}", header.Key, string.Join(", ", header.Value));
+            }
 
             _logger.LogInformation(
                 "Sending GET request to Mockery service at {BaseAddress}/{ApiPath}",
