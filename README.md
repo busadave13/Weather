@@ -160,6 +160,36 @@ dotnet run --project src/Weather/Weather.csproj
 
 The API will be available at `https://localhost:5001` with Swagger UI at `/swagger`.
 
+## Health Checks
+
+Kubernetes-compatible health check endpoints:
+
+| Endpoint | Purpose | Description |
+|----------|---------|-------------|
+| `/health/live` | Liveness probe | Indicates if the app is running |
+| `/health/ready` | Readiness probe | Indicates if the app is ready for traffic |
+| `/health/startup` | Startup probe | Indicates if the app has started |
+
+### Configuration
+
+```json
+{
+  "HealthCheck": {
+    "RequestCountThreshold": 1000,
+    "LiveGracePeriodRequests": 100
+  }
+}
+```
+
+| Setting | Description |
+|---------|-------------|
+| `RequestCountThreshold` | Ready becomes Unhealthy after this many requests (0 = disabled) |
+| `LiveGracePeriodRequests` | Additional requests before Live becomes Unhealthy |
+
+The health checks count each probe call. When `RequestCountThreshold` is exceeded:
+- `/health/ready` returns Unhealthy (stops new traffic)
+- `/health/live` returns Unhealthy after grace period (triggers pod restart)
+
 ## Load Testing
 
 Load tests using [Fortio](https://github.com/fortio/fortio) are available in the `fortio/` directory:
@@ -192,6 +222,38 @@ Sample output:
 ```
 
 See [fortio/README.md](fortio/README.md) for full documentation.
+
+## CI/CD Pipeline
+
+Automated publishing via GitHub Actions when PRs are merged to `main`.
+
+### Docker Image
+
+```bash
+# Pull latest
+docker pull ghcr.io/busadave13/weather:latest
+
+# Pull specific version
+docker pull ghcr.io/busadave13/weather:1.0.0
+
+# Run locally
+docker run -p 8080:8080 ghcr.io/busadave13/weather:latest
+```
+
+### Helm Chart
+
+```bash
+# Install from GitHub Container Registry
+helm install weather oci://ghcr.io/busadave13/helm/weather --version 1.0.0
+
+# Install with custom values
+helm install weather oci://ghcr.io/busadave13/helm/weather \
+  --version 1.0.0 \
+  --namespace dev \
+  --create-namespace
+```
+
+See [.github/PUBLISH.md](.github/PUBLISH.md) for full CI/CD documentation.
 
 ## Cline Workflows
 
