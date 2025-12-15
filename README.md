@@ -81,6 +81,8 @@ Internal models that map the raw JSON responses from sensor services:
 
 ## Configuration
 
+### Sensor Services
+
 Configure sensor service URLs in `appsettings.json`:
 
 ```json
@@ -97,6 +99,39 @@ Configure sensor service URLs in `appsettings.json`:
     }
   }
 }
+```
+
+### Load Shedding
+
+Configure load shedding to reject a percentage of requests when RPS exceeds a threshold:
+
+```json
+{
+  "LoadShedding": {
+    "Enabled": true,
+    "RpsThreshold": 100,
+    "FailurePercentage": 25,
+    "FailureStatusCode": 503,
+    "WindowDurationSeconds": 1
+  }
+}
+```
+
+| Setting | Description |
+|---------|-------------|
+| `Enabled` | Enable/disable load shedding |
+| `RpsThreshold` | RPS threshold to trigger shedding |
+| `FailurePercentage` | Percentage of requests to reject when over threshold |
+| `FailureStatusCode` | HTTP status code for rejected requests |
+| `WindowDurationSeconds` | Sliding window duration for RPS calculation |
+
+### Mockery Integration
+
+Enable mock responses via the `X-Mockery-Mocks` header:
+
+```bash
+curl -H "X-Mockery-Mocks: windsensor/success, temperaturesensor/success, precipitationsensor/success" \
+     http://localhost:5081/api/weather
 ```
 
 ## Building and Running
@@ -124,6 +159,39 @@ dotnet run --project src/Weather/Weather.csproj
 ```
 
 The API will be available at `https://localhost:5001` with Swagger UI at `/swagger`.
+
+## Load Testing
+
+Load tests using [Fortio](https://github.com/fortio/fortio) are available in the `fortio/` directory:
+
+```powershell
+# Run load test at 100 QPS for 30 seconds (runs via Docker by default)
+.\fortio\run-test.ps1 -Qps 100 -Duration 30s
+
+# Test load shedding by exceeding threshold
+.\fortio\run-test.ps1 -Qps 200 -Duration 1m
+```
+
+Sample output:
+```
+           LOAD TEST RESULTS
+
+  Total Requests:    1496
+  Actual QPS:        149.5
+
+  HTTP Status Codes:
+    ✓ 200 OK:        1463 (97.8%)
+    ⚠ 503 Shed:      33 (2.2%)
+
+  Latency (ms):
+    Avg:    29.43
+    P50:    26.42
+    P90:    40.6
+    P99:    115.2
+    Max:    149.38
+```
+
+See [fortio/README.md](fortio/README.md) for full documentation.
 
 ## Cline Workflows
 

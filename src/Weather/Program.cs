@@ -1,6 +1,7 @@
 using Weather.BusinessLogic;
 using Weather.Clients;
 using Weather.Clients.Handlers;
+using Weather.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,6 +60,9 @@ builder.Services.AddHttpClient<IPrecipitationSensorClient, PrecipitationSensorCl
 // Register business logic services
 builder.Services.AddScoped<IWeatherBusinessLogic, WeatherBusinessLogic>();
 
+// Register load shedding middleware
+builder.Services.AddLoadShedding(builder.Configuration);
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -69,6 +73,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Apply load shedding before authorization and routing
+app.UseLoadShedding();
 
 app.UseAuthorization();
 
