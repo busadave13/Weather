@@ -55,7 +55,7 @@ The MockeryHandler is a DelegatingHandler that intercepts outgoing HTTP requests
 │ MockeryHandler (ServiceName: "WindSensor")                     │
 │ 1. Parse X-Mockery-Mocks header                               │
 │ 2. Find mock matching "wind" → "wind/success"                 │
-│ 3. Call Mockery service with X-Mock-ID: wind/success          │
+│ 3. Call Mockery service with X-Mockery-Mock: wind/success     │
 │ 4. Return mocked response                                      │
 └────────────────────────────────────────────────────────────────┘
 ```

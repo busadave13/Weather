@@ -11,7 +11,7 @@ MockeryHandler implementation and simplification for service-specific mocking.
    - Implemented `X-Mockery-Mocks` header parsing with comma-delimited mock list
    - Matches mocks by first segment (e.g., "wind/prod/success" matches "WindSensor")
    - Random selection when multiple mocks match the same service
-   - Routes matched requests to Mockery service with `X-Mock-ID` header
+   - Routes matched requests to Mockery service with `X-Mockery-Mock` header
 
 2. **Created MockeryHandlerFactory**
    - Factory pattern for creating service-specific handlers
@@ -20,7 +20,7 @@ MockeryHandler implementation and simplification for service-specific mocking.
 3. **Simplified MockeryHandler**
    - Removed `X-Mock-ID` header parsing from incoming requests
    - Now only uses `X-Mockery-Mocks` header for mock selection
-   - `X-Mock-ID` constant kept for calling Mockery service
+   - `X-Mockery-Mock` header used when calling Mockery service
 
 4. **Added comprehensive unit tests**
    - 13 tests covering constructor, header parsing, random selection, edge cases
@@ -49,7 +49,7 @@ MockeryHandler (service-specific, e.g., "WindSensor")
     ↓
 Parse header → Find matching mock by first segment
     ↓
-Match found? → Call Mockery with X-Mock-ID header
+Match found? → Call Mockery with X-Mockery-Mock header
 No match?   → Call real downstream service
 ```
 

@@ -16,7 +16,7 @@ namespace Weather.Clients.Handlers;
 /// When processing an outgoing request, this handler will:
 /// 1. Check the incoming HTTP request for the X-Mockery-Mocks header
 /// 2. Parse the header and find a mock that matches this handler's ServiceName
-/// 3. If a match is found, route the request to the Mockery service with X-Mock-ID header
+/// 3. If a match is found, route the request to the Mockery service with X-Mockery-Mock header
 /// 4. Return the mocked response from the Mockery service
 /// 
 /// If no matching mock is found, the request proceeds normally to the real service.
@@ -32,7 +32,7 @@ public class MockeryHandler : DelegatingHandler
     /// The name of the header used when calling the Mockery service to identify which mock to return.
     /// This header is set by the handler when routing requests to Mockery.
     /// </summary>
-    public const string MockIdHeaderName = "X-Mock-ID";
+    public const string MockIdHeaderName = "X-Mockery-Mock";
 
     /// <summary>
     /// The name of the header that contains a comma-delimited list of mock identifiers.

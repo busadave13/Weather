@@ -9,6 +9,7 @@
 - [x] Registered handlers in Program.cs for all sensor clients
 - [x] Implemented `X-Mockery-Mocks` header parsing
 - [x] Removed `X-Mock-ID` header parsing (simplified design)
+- [x] Renamed header to `X-Mockery-Mock` for consistency
 - [x] Added 13 comprehensive unit tests
 
 ### ✅ Core API Implementation (2024-12-14)
