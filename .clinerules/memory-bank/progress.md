@@ -2,6 +2,35 @@
 
 ## Completed Work
 
+### ✅ Health Check Counter Refactoring (2025-12-14)
+- [x] Removed `RequestCounterMiddleware` - no longer needed
+- [x] `ReadyHealthCheck` now increments counter via `IncrementAndGet()`
+- [x] `LiveHealthCheck` now increments counter via `IncrementAndGet()`
+- [x] Updated unit tests to verify counter increment behavior
+- [x] All 74 tests passing
+
+### ✅ CI/CD Pipeline Implementation (2025-12-14)
+- [x] Created Dockerfile
+- [x] Created `.github/workflows/publish-docker-helm.yml`
+- [x] Created Helm chart in `charts/weather/`
+- [x] Updated `.github/PUBLISH.md` documentation
+- [x] Configured GitVersion for semantic versioning
+- [x] Publishes to GitHub Container Registry (ghcr.io)
+
+### ✅ Load Shedding Middleware (2025-12-14)
+- [x] Created `LoadSheddingOptions` configuration class
+- [x] Created `LoadSheddingMiddleware` with sliding window RPS tracking
+- [x] Created `LoadSheddingExtensions` for DI registration
+- [x] Added configuration section in `appsettings.json`
+- [x] Added 17 comprehensive unit tests
+
+### ✅ Health Checks Implementation (2025-12-14)
+- [x] `LiveHealthCheck` - Liveness probe with grace period
+- [x] `ReadyHealthCheck` - Readiness probe based on request count threshold
+- [x] `StartupHealthCheck` - Startup probe
+- [x] `RequestCounter` - Thread-safe counter using Interlocked
+- [x] `HealthCheckOptions` - Configuration class
+
 ### ✅ MockeryHandler Implementation (2025-12-14)
 - [x] Created `MockeryHandler` delegating handler for service-specific mocking
 - [x] Created `MockeryHandlerFactory` for creating handlers per HttpClient
@@ -22,6 +51,7 @@
 - [x] Set up xUnit test project
 - [x] Added unit tests for business logic
 - [x] Added unit tests for MockeryHandler
+- [x] 74 total tests passing
 
 ### ✅ Cline Workflow Setup (2024-12-14)
 - [x] Created `.clinerules/workflows/pullrequest.md`
@@ -42,11 +72,9 @@
 
 ## Pending Work
 
-### 🔲 DevOps
-- [ ] Create Dockerfile
-- [ ] Set up GitHub Actions CI workflow
+### 🔲 Infrastructure
 - [ ] Add Terraform infrastructure code
-- [ ] Configure deployment pipelines
+- [ ] Configure Kubernetes deployments
 
 ### 🔲 Documentation
 - [ ] Add API documentation (Swagger/OpenAPI)
@@ -67,5 +95,8 @@
 | Memory Bank Init | ✅ Complete | 2024-12-14 |
 | Core API | ✅ Complete | 2024-12-14 |
 | MockeryHandler | ✅ Complete | 2025-12-14 |
-| Testing | ✅ Complete | 2025-12-14 |
-| CI/CD | 🔲 Pending | TBD |
+| Health Checks | ✅ Complete | 2025-12-14 |
+| Load Shedding | ✅ Complete | 2025-12-14 |
+| CI/CD Pipeline | ✅ Complete | 2025-12-14 |
+| Testing (74 tests) | ✅ Complete | 2025-12-14 |
+| Infrastructure | 🔲 Pending | TBD |
