@@ -29,9 +29,16 @@ public class MockeryHandler : DelegatingHandler
     private readonly MockeryHandlerOptions _options;
 
     /// <summary>
-    /// The name of the header that triggers mock routing.
+    /// The name of the header that triggers mock routing with a direct mock ID.
     /// </summary>
     public const string MockIdHeaderName = "X-Mock-ID";
+
+    /// <summary>
+    /// The name of the header that contains a comma-delimited list of mock identifiers.
+    /// Each mock identifier should have the service name as the first segment (e.g., "wind/prod/success").
+    /// The handler will match mocks based on the ServiceName and randomly select one if multiple match.
+    /// </summary>
+    public const string MockeryMocksHeaderName = "X-Mockery-Mocks";
 
     /// <summary>
     /// The name of the HttpClient used to call the Mockery service.
@@ -44,19 +51,27 @@ public class MockeryHandler : DelegatingHandler
     private const string MockApiPath = "api/mock";
 
     /// <summary>
+    /// Gets the name of the downstream service this handler is configured for.
+    /// </summary>
+    public string ServiceName { get; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="MockeryHandler"/> class.
     /// </summary>
+    /// <param name="serviceName">The name of the downstream service this handler is configured for.</param>
     /// <param name="httpClientFactory">The HTTP client factory for creating clients.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor to read incoming request headers.</param>
     /// <param name="logger">The logger instance for this handler.</param>
     /// <param name="options">The configuration options for this handler.</param>
     /// <exception cref="ArgumentNullException">Thrown when any parameter is null.</exception>
     public MockeryHandler(
+        string serviceName,
         IHttpClientFactory httpClientFactory,
         IHttpContextAccessor httpContextAccessor,
         ILogger<MockeryHandler> logger,
         IOptions<MockeryHandlerOptions> options)
     {
+        ServiceName = serviceName ?? throw new ArgumentNullException(nameof(serviceName));
         _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
         _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -83,23 +98,31 @@ public class MockeryHandler : DelegatingHandler
             return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
         }
 
-        // Step 1: Propagate X-Mock-ID header from incoming request to outgoing request
+        // Step 1: Check for X-Mock-ID header (direct mock ID takes priority)
         var mockId = PropagateAndGetMockIdHeader(request);
 
-        // Step 2: If X-Mock-ID is present, route to Mockery service
+        // Step 2: If no X-Mock-ID, check X-Mockery-Mocks for service-specific mock
+        if (string.IsNullOrWhiteSpace(mockId))
+        {
+            mockId = GetMockIdFromMocksList();
+        }
+
+        // Step 3: If a mock ID was found (from either header), route to Mockery service
         if (!string.IsNullOrWhiteSpace(mockId))
         {
             _logger.LogInformation(
-                "Intercepted request with {HeaderName}: {MockId}. Routing to Mockery service.",
-                MockIdHeaderName,
+                "Intercepted request for service '{ServiceName}' with MockId: {MockId}. Routing to Mockery service.",
+                ServiceName,
                 mockId);
 
             return await CallMockeryServiceAsync(request, mockId, cancellationToken)
                 .ConfigureAwait(false);
         }
 
-        // No X-Mock-ID header present, proceed with normal request pipeline
-        _logger.LogDebug("No {HeaderName} header found. Proceeding with normal request pipeline.", MockIdHeaderName);
+        // No mock routing applicable, proceed with normal request pipeline
+        _logger.LogDebug(
+            "No mock ID found for service '{ServiceName}'. Proceeding with normal request pipeline.",
+            ServiceName);
 
         return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
     }
@@ -147,6 +170,109 @@ public class MockeryHandler : DelegatingHandler
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Gets the mock ID from the X-Mockery-Mocks header by matching the first segment
+    /// of each mock identifier against the ServiceName.
+    /// </summary>
+    /// <returns>
+    /// The matched mock ID if found, null otherwise. If multiple mocks match,
+    /// one is randomly selected.
+    /// </returns>
+    private string? GetMockIdFromMocksList()
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext == null)
+        {
+            _logger.LogDebug("No HttpContext available for {HeaderName} header lookup", MockeryMocksHeaderName);
+            return null;
+        }
+
+        if (!httpContext.Request.Headers.TryGetValue(MockeryMocksHeaderName, out var headerValue))
+        {
+            return null;
+        }
+
+        var mocksList = headerValue.ToString();
+        if (string.IsNullOrWhiteSpace(mocksList))
+        {
+            return null;
+        }
+
+        var matchedMock = FindMatchingMockFromList(mocksList);
+        
+        if (matchedMock != null)
+        {
+            _logger.LogDebug(
+                "Found matching mock '{MatchedMock}' for service '{ServiceName}' from {HeaderName} header",
+                matchedMock,
+                ServiceName,
+                MockeryMocksHeaderName);
+        }
+        
+        return matchedMock;
+    }
+
+    /// <summary>
+    /// Parses a comma-delimited list of mock identifiers and finds mocks that match
+    /// the current ServiceName. The first segment of each mock (before the first '/')
+    /// is compared against the ServiceName using case-insensitive matching.
+    /// </summary>
+    /// <param name="mocksList">A comma-delimited list of mock identifiers (e.g., "wind/prod/success,temperature/dev/error").</param>
+    /// <returns>
+    /// A matching mock identifier if found, null otherwise.
+    /// If multiple mocks match the ServiceName, one is randomly selected.
+    /// </returns>
+    private string? FindMatchingMockFromList(string mocksList)
+    {
+        var mocks = mocksList.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        
+        // Collect ALL matching mocks
+        var matchingMocks = new List<string>();
+        
+        foreach (var mock in mocks)
+        {
+            // Get the first segment (before the first '/')
+            var separatorIndex = mock.IndexOf('/');
+            var firstSegment = separatorIndex >= 0 ? mock[..separatorIndex] : mock;
+            
+            // Case-insensitive comparison: check if ServiceName contains the first segment
+            if (ServiceName.Contains(firstSegment, StringComparison.OrdinalIgnoreCase))
+            {
+                matchingMocks.Add(mock);
+                _logger.LogDebug(
+                    "Mock '{Mock}' matches ServiceName '{ServiceName}' (first segment: '{FirstSegment}')",
+                    mock,
+                    ServiceName,
+                    firstSegment);
+            }
+        }
+        
+        if (matchingMocks.Count == 0)
+        {
+            _logger.LogDebug(
+                "No matching mocks found for ServiceName '{ServiceName}' in mocks list",
+                ServiceName);
+            return null;
+        }
+        
+        if (matchingMocks.Count == 1)
+        {
+            return matchingMocks[0];
+        }
+        
+        // Randomly select one when multiple mocks match
+        var randomIndex = Random.Shared.Next(matchingMocks.Count);
+        var selectedMock = matchingMocks[randomIndex];
+        
+        _logger.LogDebug(
+            "Multiple mocks matched ServiceName '{ServiceName}'. Randomly selected '{SelectedMock}' from {Count} matches",
+            ServiceName,
+            selectedMock,
+            matchingMocks.Count);
+        
+        return selectedMock;
     }
 
     /// <summary>

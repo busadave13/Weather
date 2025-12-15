@@ -11,5 +11,6 @@ get {
 }
 
 headers {
-  X-Mock-ID: weather/temperature, weather/wind, weather/precipitation
+  X-Mockery-Mocks: windsensor/success, temperaturesensor/success, precipitationsensore/success
+  ~X-Mock-ID: weather/temperature, weather/wind, weather/precipitation
 }
