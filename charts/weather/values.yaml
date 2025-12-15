@@ -41,4 +41,5 @@ config:
     # Enable/disable Mockery integration
     enabled: true
     # Mockery service base URL (Kubernetes service DNS)
-    baseUrl: "http://mockery-svc.mockery.svc.cluster.local:80"
+    # Using mockery-dep service which has active endpoints on port 8080
+    baseUrl: "http://mockery-dep.mockery.svc.cluster.local:8080"
