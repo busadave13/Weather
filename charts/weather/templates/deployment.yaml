@@ -40,6 +40,11 @@ spec:
               value: {{ .Values.config.openTelemetry.otlpProtocol | quote }}
             - name: OTEL_EXPORTER_OTLP_HEADERS
               value: {{ printf "x-otlp-api-key=%s" .Values.config.openTelemetry.otlpApiKey | quote }}
+            # Mockery configuration
+            - name: Mockery__Enabled
+              value: {{ .Values.config.mockery.enabled | quote }}
+            - name: Mockery__BaseUrl
+              value: {{ .Values.config.mockery.baseUrl | quote }}
           resources:
             limits:
               cpu: {{ .Values.resources.limits.cpu }}
