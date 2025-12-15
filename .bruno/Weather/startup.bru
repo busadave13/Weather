@@ -1,0 +1,11 @@
+meta {
+  name: startup
+  type: http
+  seq: 5
+}
+
+get {
+  url: http://{{host}}/health/startup
+  body: none
+  auth: none
+}

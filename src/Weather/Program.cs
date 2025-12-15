@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Weather.BusinessLogic;
 using Weather.Clients;
 using Weather.Clients.Handlers;
 using Weather.Extensions;
+using Weather.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -63,6 +65,16 @@ builder.Services.AddScoped<IWeatherBusinessLogic, WeatherBusinessLogic>();
 // Register load shedding middleware
 builder.Services.AddLoadShedding(builder.Configuration);
 
+// Register health check services
+builder.Services.Configure<Weather.HealthChecks.HealthCheckOptions>(
+    builder.Configuration.GetSection(Weather.HealthChecks.HealthCheckOptions.SectionName));
+builder.Services.AddSingleton<IRequestCounter, RequestCounter>();
+
+builder.Services.AddHealthChecks()
+    .AddCheck<LiveHealthCheck>("live", tags: new[] { "live" })
+    .AddCheck<ReadyHealthCheck>("ready", tags: new[] { "ready" })
+    .AddCheck<StartupHealthCheck>("startup", tags: new[] { "startup" });
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -77,8 +89,27 @@ app.UseHttpsRedirection();
 // Apply load shedding before authorization and routing
 app.UseLoadShedding();
 
+// Count requests for health check monitoring
+app.UseMiddleware<RequestCounterMiddleware>();
+
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Map health check endpoints
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("live")
+});
+
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+});
+
+app.MapHealthChecks("/health/startup", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("startup")
+});
 
 app.Run();

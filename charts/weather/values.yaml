@@ -1,0 +1,38 @@
+# Default values for mockery Helm chart
+
+name: weather
+namespace: weather
+replicaCount: 1
+
+image:
+  name: weather:latest
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+# Application configuration
+config:
+  # ASP.NET Core Environment (always use Production for Kubernetes)
+  # Git repository configuration is baked into the Docker image via appsettings.Production.json
+  aspnetcoreEnvironment: "Production"
+  # OpenTelemetry configuration
+  openTelemetry:
+    # Service name for OpenTelemetry
+    serviceName: "Weather"
+    # OTLP endpoint for traces/metrics/logs - points to Aspire dashboard in monitor namespace
+    otlpEndpoint: "http://aspire.monitor.svc.cluster.local:18889"
+    # OTLP protocol (grpc or http/protobuf)
+    otlpProtocol: "grpc"
+    # OTLP API key for Aspire dashboard authentication
+    otlpApiKey: "aspire"
