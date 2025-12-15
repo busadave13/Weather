@@ -214,30 +214,10 @@ public class MockeryHandlerTests
 
     #endregion
 
-    #region Header Priority Tests
+    #region Mock ID Sent to Mockery Tests
 
     [Fact]
-    public async Task SendAsync_WithBothHeaders_XMockIdTakesPriority()
-    {
-        // Arrange
-        string? capturedMockId = null;
-        var handler = CreateHandlerWithMockeryClientCapturingMockId("WindSensor", out var mockIdRef);
-        
-        _httpContext.Request.Headers[MockeryHandler.MockIdHeaderName] = "direct-mock-id";
-        _httpContext.Request.Headers[MockeryHandler.MockeryMocksHeaderName] = "wind/prod/success";
-
-        var request = new HttpRequestMessage(HttpMethod.Get, "http://api.example.com/test");
-
-        // Act
-        await handler.SendAsync(request);
-        capturedMockId = mockIdRef.Value;
-
-        // Assert - X-Mock-ID should take priority
-        capturedMockId.Should().Be("direct-mock-id");
-    }
-
-    [Fact]
-    public async Task SendAsync_WithOnlyMockeryMocks_UsesMockeryMocks()
+    public async Task SendAsync_WithMockeryMocks_SendsMatchedMockIdToMockery()
     {
         // Arrange
         var handler = CreateHandlerWithMockeryClientCapturingMockId("WindSensor", out var mockIdRef);
@@ -248,7 +228,7 @@ public class MockeryHandlerTests
         // Act
         await handler.SendAsync(request);
 
-        // Assert
+        // Assert - the matched mock ID should be sent to Mockery
         mockIdRef.Value.Should().Be("wind/prod/success");
     }
 

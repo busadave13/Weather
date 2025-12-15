@@ -6,20 +6,20 @@ using Microsoft.Extensions.Options;
 namespace Weather.Clients.Handlers;
 
 /// <summary>
-/// A delegating handler that propagates the X-Mock-ID header from incoming requests
-/// and routes requests to the Mockery service when the header is present.
+/// A delegating handler that routes requests to the Mockery service based on the X-Mockery-Mocks header.
 /// </summary>
 /// <remarks>
-/// This handler is self-contained and combines header propagation with mock routing.
-/// It uses IHttpClientFactory to create its own HttpClient for calling the Mockery service.
+/// This handler uses the X-Mockery-Mocks header to determine which mock to use for each service.
+/// The header contains a comma-delimited list of mock identifiers, each with the service name as
+/// the first segment (e.g., "wind/prod/success,temperature/dev/error").
 /// 
 /// When processing an outgoing request, this handler will:
-/// 1. Check the incoming HTTP request (via IHttpContextAccessor) for the X-Mock-ID header
-/// 2. If present, propagate the header to the outgoing request
-/// 3. Route the request to the Mockery service instead of the original endpoint
+/// 1. Check the incoming HTTP request for the X-Mockery-Mocks header
+/// 2. Parse the header and find a mock that matches this handler's ServiceName
+/// 3. If a match is found, route the request to the Mockery service with X-Mock-ID header
 /// 4. Return the mocked response from the Mockery service
 /// 
-/// If the X-Mock-ID header is not present, the request proceeds normally to the next handler.
+/// If no matching mock is found, the request proceeds normally to the real service.
 /// </remarks>
 public class MockeryHandler : DelegatingHandler
 {
@@ -29,7 +29,8 @@ public class MockeryHandler : DelegatingHandler
     private readonly MockeryHandlerOptions _options;
 
     /// <summary>
-    /// The name of the header that triggers mock routing with a direct mock ID.
+    /// The name of the header used when calling the Mockery service to identify which mock to return.
+    /// This header is set by the handler when routing requests to Mockery.
     /// </summary>
     public const string MockIdHeaderName = "X-Mock-ID";
 
@@ -80,7 +81,7 @@ public class MockeryHandler : DelegatingHandler
     }
 
     /// <summary>
-    /// Sends an HTTP request after propagating the X-Mock-ID header and routing to Mockery if present.
+    /// Sends an HTTP request, routing to Mockery service if a matching mock is found in X-Mockery-Mocks header.
     /// </summary>
     /// <param name="request">The HTTP request message to send.</param>
     /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
@@ -98,16 +99,10 @@ public class MockeryHandler : DelegatingHandler
             return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
         }
 
-        // Step 1: Check for X-Mock-ID header (direct mock ID takes priority)
-        var mockId = PropagateAndGetMockIdHeader(request);
+        // Check X-Mockery-Mocks header for service-specific mock
+        var mockId = GetMockIdFromMocksList();
 
-        // Step 2: If no X-Mock-ID, check X-Mockery-Mocks for service-specific mock
-        if (string.IsNullOrWhiteSpace(mockId))
-        {
-            mockId = GetMockIdFromMocksList();
-        }
-
-        // Step 3: If a mock ID was found (from either header), route to Mockery service
+        // If a mock ID was found, route to Mockery service
         if (!string.IsNullOrWhiteSpace(mockId))
         {
             _logger.LogInformation(
@@ -125,51 +120,6 @@ public class MockeryHandler : DelegatingHandler
             ServiceName);
 
         return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Propagates the X-Mock-ID header from the incoming HTTP request to the outgoing request
-    /// and returns the mock ID value.
-    /// </summary>
-    /// <param name="request">The outgoing HTTP request to add the header to.</param>
-    /// <returns>The mock ID value if present, null otherwise.</returns>
-    private string? PropagateAndGetMockIdHeader(HttpRequestMessage request)
-    {
-        // First check if header is already on the outgoing request
-        if (request.Headers.TryGetValues(MockIdHeaderName, out var existingValues))
-        {
-            var existingValue = existingValues.FirstOrDefault();
-            if (!string.IsNullOrWhiteSpace(existingValue))
-            {
-                _logger.LogDebug("Header {HeaderName} already present on outgoing request", MockIdHeaderName);
-                return existingValue;
-            }
-        }
-
-        // Try to get the header from the incoming HTTP context
-        var httpContext = _httpContextAccessor.HttpContext;
-        if (httpContext == null)
-        {
-            _logger.LogDebug("No HttpContext available for header propagation");
-            return null;
-        }
-
-        if (httpContext.Request.Headers.TryGetValue(MockIdHeaderName, out var headerValue))
-        {
-            var value = headerValue.ToString();
-            if (!string.IsNullOrWhiteSpace(value))
-            {
-                // Add the header to the outgoing request
-                request.Headers.TryAddWithoutValidation(MockIdHeaderName, value);
-                _logger.LogDebug(
-                    "Propagated header {HeaderName}={HeaderValue} from incoming to outgoing request",
-                    MockIdHeaderName,
-                    value);
-                return value;
-            }
-        }
-
-        return null;
     }
 
     /// <summary>
