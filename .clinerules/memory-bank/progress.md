@@ -2,12 +2,25 @@
 
 ## Completed Work
 
+### ✅ Test Configuration API & k6 Load Testing (2025-12-16)
+- [x] Created `POST /api/config` endpoint for runtime test configuration
+- [x] Created `ITestConfigurationState` interface and implementation
+- [x] Added force fail flags for health checks (startup, ready, live)
+- [x] Added delay settings for health checks
+- [x] Created k6 load testing folder with scripts
+- [x] Created `load-test.js` - Standard load test
+- [x] Created `stress-test.js` - Stress test
+- [x] Created `spike-test.js` - Spike test for load shedding
+- [x] Removed fortio folder (replaced with k6)
+- [x] Added LoadShedding configuration to Helm chart
+- [x] 83 unit tests passing
+
 ### ✅ MockeryHandler Header Fix (2025-12-14)
 - [x] Debugged 503 errors from Mockery service
 - [x] Identified root cause: `TryAddWithoutValidation()` silently failing
 - [x] Changed to `Headers.Add()` for reliable header addition
 - [x] Added diagnostic logging for header verification
-- [x] Fixed Helm chart Mockery URL (mockery-svc:80 instead of mockery:8080)
+- [x] Fixed Helm chart Mockery URL
 - [x] All 74 unit tests passing
 
 ### ✅ Health Check Counter Refactoring (2025-12-14)
@@ -15,7 +28,6 @@
 - [x] `ReadyHealthCheck` now increments counter via `IncrementAndGet()`
 - [x] `LiveHealthCheck` now increments counter via `IncrementAndGet()`
 - [x] Updated unit tests to verify counter increment behavior
-- [x] All 74 tests passing
 
 ### ✅ CI/CD Pipeline Implementation (2025-12-14)
 - [x] Created Dockerfile
@@ -37,7 +49,6 @@
 - [x] `ReadyHealthCheck` - Readiness probe based on request count threshold
 - [x] `StartupHealthCheck` - Startup probe
 - [x] `RequestCounter` - Thread-safe counter using Interlocked
-- [x] `HealthCheckOptions` - Configuration class
 
 ### ✅ MockeryHandler Implementation (2025-12-14)
 - [x] Created `MockeryHandler` delegating handler for service-specific mocking
@@ -45,8 +56,6 @@
 - [x] Created `MockeryHandlerOptions` for configuration
 - [x] Registered handlers in Program.cs for all sensor clients
 - [x] Implemented `X-Mockery-Mocks` header parsing
-- [x] Removed `X-Mock-ID` header parsing (simplified design)
-- [x] Renamed header to `X-Mockery-Mock` for consistency
 - [x] Added 13 comprehensive unit tests
 
 ### ✅ Core API Implementation (2024-12-14)
@@ -59,7 +68,7 @@
 - [x] Set up xUnit test project
 - [x] Added unit tests for business logic
 - [x] Added unit tests for MockeryHandler
-- [x] 74 total tests passing
+- [x] 83 total tests passing
 
 ### ✅ Cline Workflow Setup (2024-12-14)
 - [x] Created `.clinerules/workflows/pullrequest.md`
@@ -106,5 +115,7 @@
 | Health Checks | ✅ Complete | 2025-12-14 |
 | Load Shedding | ✅ Complete | 2025-12-14 |
 | CI/CD Pipeline | ✅ Complete | 2025-12-14 |
-| Testing (74 tests) | ✅ Complete | 2025-12-14 |
+| Test Config API | ✅ Complete | 2025-12-16 |
+| k6 Load Testing | ✅ Complete | 2025-12-16 |
+| Testing (83 tests) | ✅ Complete | 2025-12-16 |
 | Infrastructure | 🔲 Pending | TBD |

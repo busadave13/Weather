@@ -43,3 +43,15 @@ config:
     # Mockery service base URL (Kubernetes service DNS)
     # Using mockery-dep service which has active endpoints on port 8080
     baseUrl: "http://mockery.mockery.svc.cluster.local"
+  # Load shedding configuration
+  loadShedding:
+    # Enable/disable load shedding middleware
+    enabled: true
+    # Requests per second threshold before load shedding activates
+    rpsThreshold: 100
+    # Percentage of requests to reject when over threshold (0-100)
+    failurePercentage: 2
+    # HTTP status code to return for rejected requests
+    failureStatusCode: 503
+    # Sliding window size in seconds for RPS calculation
+    windowSizeSeconds: 1

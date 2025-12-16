@@ -45,6 +45,17 @@ spec:
               value: {{ .Values.config.mockery.enabled | quote }}
             - name: Mockery__BaseUrl
               value: {{ .Values.config.mockery.baseUrl | quote }}
+            # Load shedding configuration
+            - name: LoadShedding__Enabled
+              value: {{ .Values.config.loadShedding.enabled | quote }}
+            - name: LoadShedding__RpsThreshold
+              value: {{ .Values.config.loadShedding.rpsThreshold | quote }}
+            - name: LoadShedding__FailurePercentage
+              value: {{ .Values.config.loadShedding.failurePercentage | quote }}
+            - name: LoadShedding__FailureStatusCode
+              value: {{ .Values.config.loadShedding.failureStatusCode | quote }}
+            - name: LoadShedding__WindowSizeSeconds
+              value: {{ .Values.config.loadShedding.windowSizeSeconds | quote }}
           resources:
             limits:
               cpu: {{ .Values.resources.limits.cpu }}
