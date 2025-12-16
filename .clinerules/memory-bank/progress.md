@@ -2,6 +2,18 @@
 
 ## Completed Work
 
+### ✅ Alerts API with Controller-Based Load Shedding (2025-12-16)
+- [x] Created `GET /api/alerts` endpoint with load shedding in controller
+- [x] Created `ILoadSheddingService` interface
+- [x] Created `LoadSheddingService` (singleton with sliding window RPS tracking)
+- [x] Created `AlertsController` with load shedding protection
+- [x] Removed `LoadSheddingMiddleware` (deleted)
+- [x] Removed `LoadSheddingExtensions` (deleted)
+- [x] Created `LoadSheddingServiceTests.cs` (10 tests)
+- [x] Created `AlertsControllerTests.cs` (11 tests)
+- [x] Deleted `LoadSheddingMiddlewareTests.cs`
+- [x] 90 unit tests passing
+
 ### ✅ Test Configuration API & k6 Load Testing (2025-12-16)
 - [x] Created `POST /api/config` endpoint for runtime test configuration
 - [x] Created `ITestConfigurationState` interface and implementation
@@ -13,7 +25,6 @@
 - [x] Created `spike-test.js` - Spike test for load shedding
 - [x] Removed fortio folder (replaced with k6)
 - [x] Added LoadShedding configuration to Helm chart
-- [x] 83 unit tests passing
 
 ### ✅ MockeryHandler Header Fix (2025-12-14)
 - [x] Debugged 503 errors from Mockery service
@@ -117,5 +128,6 @@
 | CI/CD Pipeline | ✅ Complete | 2025-12-14 |
 | Test Config API | ✅ Complete | 2025-12-16 |
 | k6 Load Testing | ✅ Complete | 2025-12-16 |
-| Testing (83 tests) | ✅ Complete | 2025-12-16 |
+| Testing (90 tests) | ✅ Complete | 2025-12-16 |
+| Alerts API | ✅ Complete | 2025-12-16 |
 | Infrastructure | 🔲 Pending | TBD |
