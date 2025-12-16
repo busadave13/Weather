@@ -1,0 +1,15 @@
+meta {
+  name: alerts
+  type: http
+  seq: 11
+}
+
+get {
+  url: http://{{host}}/api/alerts
+  body: none
+  auth: none
+}
+
+headers {
+  X-Mockery-Mocks: windsensor/success, windsensor/success-2, temperaturesensor/success, precipitationsensor/success
+}
