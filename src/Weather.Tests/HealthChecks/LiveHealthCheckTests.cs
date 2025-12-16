@@ -1,26 +1,21 @@
 using FluentAssertions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Moq;
+using Weather.Configuration;
 using Weather.HealthChecks;
 
 namespace Weather.Tests.HealthChecks;
 
 public class LiveHealthCheckTests
 {
-    private readonly Mock<IRequestCounter> _mockCounter;
-    private readonly Mock<IOptions<HealthCheckOptions>> _mockOptions;
+    private readonly Mock<ITestConfigurationState> _mockTestState;
     private readonly Mock<ILogger<LiveHealthCheck>> _mockLogger;
-    private readonly HealthCheckOptions _options;
 
     public LiveHealthCheckTests()
     {
-        _mockCounter = new Mock<IRequestCounter>();
-        _mockOptions = new Mock<IOptions<HealthCheckOptions>>();
+        _mockTestState = new Mock<ITestConfigurationState>();
         _mockLogger = new Mock<ILogger<LiveHealthCheck>>();
-        _options = new HealthCheckOptions();
-        _mockOptions.Setup(o => o.Value).Returns(_options);
     }
 
     private HealthCheckContext CreateContext(LiveHealthCheck healthCheck)
@@ -32,183 +27,112 @@ public class LiveHealthCheckTests
     }
 
     [Fact]
-    public void Constructor_WithNullCounter_ThrowsArgumentNullException()
+    public void Constructor_WithNullTestState_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new LiveHealthCheck(null!, _mockOptions.Object, _mockLogger.Object);
+        var act = () => new LiveHealthCheck(null!, _mockLogger.Object);
 
         // Assert
-        act.Should().Throw<ArgumentNullException>().WithParameterName("counter");
-    }
-
-    [Fact]
-    public void Constructor_WithNullOptions_ThrowsArgumentNullException()
-    {
-        // Act
-        var act = () => new LiveHealthCheck(_mockCounter.Object, null!, _mockLogger.Object);
-
-        // Assert
-        act.Should().Throw<ArgumentNullException>().WithParameterName("options");
+        act.Should().Throw<ArgumentNullException>().WithParameterName("testState");
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new LiveHealthCheck(_mockCounter.Object, _mockOptions.Object, null!);
+        var act = () => new LiveHealthCheck(_mockTestState.Object, null!);
 
         // Assert
         act.Should().Throw<ArgumentNullException>().WithParameterName("logger");
     }
 
     [Fact]
-    public async Task CheckHealthAsync_WithThresholdDisabled_ReturnsHealthy()
+    public async Task CheckHealthAsync_WhenNotForced_ReturnsHealthy()
     {
         // Arrange
-        _options.RequestCountThreshold = 0;
-        _mockCounter.Setup(c => c.IncrementAndGet()).Returns(1000);
+        _mockTestState.Setup(s => s.ForceLiveFail).Returns(false);
+        _mockTestState.Setup(s => s.LiveDelayMs).Returns(0);
 
-        var healthCheck = new LiveHealthCheck(_mockCounter.Object, _mockOptions.Object, _mockLogger.Object);
+        var healthCheck = new LiveHealthCheck(_mockTestState.Object, _mockLogger.Object);
 
         // Act
         var result = await healthCheck.CheckHealthAsync(CreateContext(healthCheck));
 
         // Assert
         result.Status.Should().Be(HealthStatus.Healthy);
-        result.Description.Should().Contain("threshold disabled");
-        _mockCounter.Verify(c => c.IncrementAndGet(), Times.Once);
+        result.Description.Should().Be("Application is alive");
     }
 
     [Fact]
-    public async Task CheckHealthAsync_WithNegativeThreshold_ReturnsHealthy()
+    public async Task CheckHealthAsync_WhenForceLiveFail_ReturnsUnhealthy()
     {
         // Arrange
-        _options.RequestCountThreshold = -1;
-        _mockCounter.Setup(c => c.IncrementAndGet()).Returns(1000);
+        _mockTestState.Setup(s => s.ForceLiveFail).Returns(true);
+        _mockTestState.Setup(s => s.LiveDelayMs).Returns(0);
 
-        var healthCheck = new LiveHealthCheck(_mockCounter.Object, _mockOptions.Object, _mockLogger.Object);
-
-        // Act
-        var result = await healthCheck.CheckHealthAsync(CreateContext(healthCheck));
-
-        // Assert
-        result.Status.Should().Be(HealthStatus.Healthy);
-        result.Description.Should().Contain("threshold disabled");
-        _mockCounter.Verify(c => c.IncrementAndGet(), Times.Once);
-    }
-
-    [Fact]
-    public async Task CheckHealthAsync_WithCountBelowLiveThreshold_ReturnsHealthy()
-    {
-        // Arrange
-        _options.RequestCountThreshold = 100;
-        _options.LiveGracePeriodRequests = 50;
-        _mockCounter.Setup(c => c.IncrementAndGet()).Returns(120); // Below 100+50=150
-
-        var healthCheck = new LiveHealthCheck(_mockCounter.Object, _mockOptions.Object, _mockLogger.Object);
-
-        // Act
-        var result = await healthCheck.CheckHealthAsync(CreateContext(healthCheck));
-
-        // Assert
-        result.Status.Should().Be(HealthStatus.Healthy);
-        result.Description.Should().Be("Request count: 120/150");
-        _mockCounter.Verify(c => c.IncrementAndGet(), Times.Once);
-    }
-
-    [Fact]
-    public async Task CheckHealthAsync_WithCountAtLiveThreshold_ReturnsUnhealthy()
-    {
-        // Arrange
-        _options.RequestCountThreshold = 100;
-        _options.LiveGracePeriodRequests = 50;
-        _mockCounter.Setup(c => c.IncrementAndGet()).Returns(150); // At 100+50=150
-
-        var healthCheck = new LiveHealthCheck(_mockCounter.Object, _mockOptions.Object, _mockLogger.Object);
+        var healthCheck = new LiveHealthCheck(_mockTestState.Object, _mockLogger.Object);
 
         // Act
         var result = await healthCheck.CheckHealthAsync(CreateContext(healthCheck));
 
         // Assert
         result.Status.Should().Be(HealthStatus.Unhealthy);
-        result.Description.Should().Be("Request count 150 exceeded live threshold 150");
-        _mockCounter.Verify(c => c.IncrementAndGet(), Times.Once);
+        result.Description.Should().Be("Forced failure via /api/config");
     }
 
     [Fact]
-    public async Task CheckHealthAsync_WithCountAboveLiveThreshold_ReturnsUnhealthy()
+    public async Task CheckHealthAsync_WithDelay_AppliesDelay()
     {
         // Arrange
-        _options.RequestCountThreshold = 100;
-        _options.LiveGracePeriodRequests = 50;
-        _mockCounter.Setup(c => c.IncrementAndGet()).Returns(200); // Above 100+50=150
+        var delayMs = 100;
+        _mockTestState.Setup(s => s.ForceLiveFail).Returns(false);
+        _mockTestState.Setup(s => s.LiveDelayMs).Returns(delayMs);
 
-        var healthCheck = new LiveHealthCheck(_mockCounter.Object, _mockOptions.Object, _mockLogger.Object);
-
-        // Act
-        var result = await healthCheck.CheckHealthAsync(CreateContext(healthCheck));
-
-        // Assert
-        result.Status.Should().Be(HealthStatus.Unhealthy);
-        result.Description.Should().Be("Request count 200 exceeded live threshold 150");
-        _mockCounter.Verify(c => c.IncrementAndGet(), Times.Once);
-    }
-
-    [Fact]
-    public async Task CheckHealthAsync_WithCountBetweenReadyAndLiveThreshold_ReturnsHealthy()
-    {
-        // Arrange
-        // Ready fails at 100, Live fails at 150
-        _options.RequestCountThreshold = 100;
-        _options.LiveGracePeriodRequests = 50;
-        _mockCounter.Setup(c => c.IncrementAndGet()).Returns(100); // At ready threshold but below live
-
-        var healthCheck = new LiveHealthCheck(_mockCounter.Object, _mockOptions.Object, _mockLogger.Object);
+        var healthCheck = new LiveHealthCheck(_mockTestState.Object, _mockLogger.Object);
 
         // Act
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         var result = await healthCheck.CheckHealthAsync(CreateContext(healthCheck));
+        stopwatch.Stop();
 
         // Assert
         result.Status.Should().Be(HealthStatus.Healthy);
-        result.Description.Should().Be("Request count: 100/150");
-        _mockCounter.Verify(c => c.IncrementAndGet(), Times.Once);
+        stopwatch.ElapsedMilliseconds.Should().BeGreaterThanOrEqualTo(delayMs - 20); // Allow some tolerance
     }
 
     [Fact]
-    public async Task CheckHealthAsync_WithZeroGracePeriod_FailsAtReadyThreshold()
+    public async Task CheckHealthAsync_WithZeroDelay_DoesNotDelay()
     {
         // Arrange
-        _options.RequestCountThreshold = 100;
-        _options.LiveGracePeriodRequests = 0;
-        _mockCounter.Setup(c => c.IncrementAndGet()).Returns(100); // At threshold
+        _mockTestState.Setup(s => s.ForceLiveFail).Returns(false);
+        _mockTestState.Setup(s => s.LiveDelayMs).Returns(0);
 
-        var healthCheck = new LiveHealthCheck(_mockCounter.Object, _mockOptions.Object, _mockLogger.Object);
-
-        // Act
-        var result = await healthCheck.CheckHealthAsync(CreateContext(healthCheck));
-
-        // Assert
-        result.Status.Should().Be(HealthStatus.Unhealthy);
-        result.Description.Should().Be("Request count 100 exceeded live threshold 100");
-        _mockCounter.Verify(c => c.IncrementAndGet(), Times.Once);
-    }
-
-    [Fact]
-    public async Task CheckHealthAsync_WithFirstCall_ReturnsHealthy()
-    {
-        // Arrange
-        _options.RequestCountThreshold = 100;
-        _options.LiveGracePeriodRequests = 50;
-        _mockCounter.Setup(c => c.IncrementAndGet()).Returns(1);
-
-        var healthCheck = new LiveHealthCheck(_mockCounter.Object, _mockOptions.Object, _mockLogger.Object);
+        var healthCheck = new LiveHealthCheck(_mockTestState.Object, _mockLogger.Object);
 
         // Act
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         var result = await healthCheck.CheckHealthAsync(CreateContext(healthCheck));
+        stopwatch.Stop();
 
         // Assert
         result.Status.Should().Be(HealthStatus.Healthy);
-        result.Description.Should().Be("Request count: 1/150");
-        _mockCounter.Verify(c => c.IncrementAndGet(), Times.Once);
+        stopwatch.ElapsedMilliseconds.Should().BeLessThan(50); // Should be nearly instant
+    }
+
+    [Fact]
+    public async Task CheckHealthAsync_WithCancellation_ThrowsTaskCanceledException()
+    {
+        // Arrange
+        _mockTestState.Setup(s => s.ForceLiveFail).Returns(false);
+        _mockTestState.Setup(s => s.LiveDelayMs).Returns(5000);
+
+        var healthCheck = new LiveHealthCheck(_mockTestState.Object, _mockLogger.Object);
+        var context = CreateContext(healthCheck);
+        var cts = new CancellationTokenSource();
+        cts.CancelAfter(50);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<TaskCanceledException>(
+            () => healthCheck.CheckHealthAsync(context, cts.Token));
     }
 }

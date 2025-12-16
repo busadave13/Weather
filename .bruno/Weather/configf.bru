@@ -1,0 +1,22 @@
+meta {
+  name: configf
+  type: http
+  seq: 9
+}
+
+post {
+  url: http://{{host}}/api/config
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+      "forceStartupFail": false,
+      "forceReadyFail": false,
+      "forceLiveFail": false,
+      "startupDelayMs": 0,
+      "readyDelayMs": 0,
+      "liveDelayMs": 0
+  }
+}
