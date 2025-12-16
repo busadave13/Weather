@@ -192,36 +192,36 @@ The health checks count each probe call. When `RequestCountThreshold` is exceede
 
 ## Load Testing
 
-Load tests using [Fortio](https://github.com/fortio/fortio) are available in the `fortio/` directory:
+Load tests using [k6](https://k6.io/) are available in the `k6/` directory:
 
 ```powershell
-# Run load test at 100 QPS for 30 seconds (runs via Docker by default)
-.\fortio\run-test.ps1 -Qps 100 -Duration 30s
+# Run standard load test
+k6 run k6/load-test.js
 
-# Test load shedding by exceeding threshold
-.\fortio\run-test.ps1 -Qps 200 -Duration 1m
+# Run stress test (find breaking points)
+k6 run k6/stress-test.js
+
+# Run spike test (sudden traffic spikes)
+k6 run k6/spike-test.js
+
+# Set custom target URL
+$env:K6_BASE_URL = "http://localhost:5081"
+k6 run k6/load-test.js
 ```
 
 Sample output:
 ```
-           LOAD TEST RESULTS
+     ✓ status is 200
+     ✓ response time < 500ms
 
-  Total Requests:    1496
-  Actual QPS:        149.5
-
-  HTTP Status Codes:
-    ✓ 200 OK:        1463 (97.8%)
-    ⚠ 503 Shed:      33 (2.2%)
-
-  Latency (ms):
-    Avg:    29.43
-    P50:    26.42
-    P90:    40.6
-    P99:    115.2
-    Max:    149.38
+     checks.........................: 100.00% ✓ 1234  ✗ 0
+     http_req_duration..............: avg=45ms    min=12ms    max=234ms
+     http_req_failed................: 0.00%   ✓ 0     ✗ 1234
+     http_reqs......................: 1234    12.34/s
+     vus............................: 20      min=1   max=20
 ```
 
-See [fortio/README.md](fortio/README.md) for full documentation.
+See [k6/README.md](k6/README.md) for full documentation.
 
 ## CI/CD Pipeline
 

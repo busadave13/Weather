@@ -1,128 +1,108 @@
 # Active Context: Weather
 
 ## Current Session Focus
-MockeryHandler debugging and Helm chart configuration fixes.
+Test configuration API, k6 load testing, and Helm chart LoadShedding integration.
 
 ## Recent Changes
 
-### Session: 2025-12-14 (Latest)
+### Session: 2025-12-16 (Latest)
+1. **Added Test Configuration API**
+   - Created `POST /api/config` endpoint for runtime test configuration
+   - Can force health checks to fail individually (startup, ready, live)
+   - Can add delays to health check responses
+   - `ITestConfigurationState` singleton for thread-safe state
+   - 83 unit tests passing
+
+2. **Added k6 Load Testing**
+   - Created `k6/` folder with load testing scripts
+   - `load-test.js` - Standard load test (ramp to 20 VUs)
+   - `stress-test.js` - Stress test (ramp to 200 VUs)
+   - `spike-test.js` - Spike test for load shedding validation
+   - Removed fortio (replaced with k6)
+
+3. **Added LoadShedding to Helm Chart**
+   - Added `config.loadShedding.*` values to `values.yaml`
+   - Added environment variables to `deployment.yaml`
+   - Can now configure load shedding via Helm values or environment variables
+   - Local: Use `appsettings.json`
+   - Kubernetes: Use `helm upgrade --set config.loadShedding.enabled=false`
+
+### Session: 2025-12-14
 1. **Fixed MockeryHandler Header Issue**
-   - Debugged issue where Mockery service was returning 503
-   - Root cause: `TryAddWithoutValidation()` was silently failing to add header
-   - Fix: Changed to `Headers.Add()` for reliable header addition
-   - Added diagnostic logging to verify header presence
-   - All 74 unit tests passing
+   - Changed `TryAddWithoutValidation()` to `Headers.Add()` for reliable header addition
+   - All unit tests passing
 
 2. **Fixed Helm Chart Mockery URL**
-   - Corrected service name from `mockery` to `mockery-svc`
-   - Corrected port from `8080` to `80`
-   - Updated URL: `http://mockery-svc.mockery.svc.cluster.local:80`
+   - Updated URL: `http://mockery.mockery.svc.cluster.local`
 
-### Session: 2025-12-14 (Previous)
-1. **Refactored Request Counter to Health Checks**
-   - Removed `RequestCounterMiddleware` - no longer needed
-   - `ReadyHealthCheck` now increments counter on each call via `IncrementAndGet()`
-   - `LiveHealthCheck` now increments counter on each call via `IncrementAndGet()`
-   - Counter increments each time health check endpoints are called
-   - Updated unit tests to verify counter increment behavior
-
-2. **Updated CI/CD Documentation**
-   - Updated `.github/PUBLISH.md` to reflect actual Weather project configuration
-   - Changed from Docker Hub to GitHub Container Registry (ghcr.io)
-   - Updated username from `davhar` to `busadave13`
-   - Added GitVersion documentation for semantic versioning
-   - Added troubleshooting and best practices sections
-
-3. **Added Helm Charts and GitHub Workflow**
-   - `charts/weather/` - Kubernetes Helm chart
-   - `.github/workflows/publish-docker-helm.yml` - CI/CD pipeline
-   - Publishes Docker images and Helm charts to ghcr.io
-
-### Previous Session: 2025-12-14
-1. **Implemented Load Shedding Middleware**
-   - Created `LoadSheddingOptions` configuration class
-   - Created `LoadSheddingMiddleware` with sliding window RPS tracking
-   - Created `LoadSheddingExtensions` for DI registration
-   - Added configuration section in `appsettings.json`
-   - Added 17 comprehensive unit tests
-
-2. **Implemented Health Checks**
-   - `LiveHealthCheck` - Liveness probe with grace period
-   - `ReadyHealthCheck` - Readiness probe based on request count threshold
-   - `StartupHealthCheck` - Startup probe
-   - `RequestCounter` - Thread-safe counter using Interlocked
-
-### Previous Session: 2024-12-14
+### Previous Sessions
+- Implemented Load Shedding Middleware
+- Implemented Health Checks (Live, Ready, Startup)
 - Created MockeryHandler with service-specific mocking
-- Created MockeryHandlerFactory for creating handlers per HttpClient
-- Created PR and checkout workflows
-- Initialized memory-bank
+- CI/CD pipeline for Docker and Helm chart publishing
 
 ## Active Decisions
 - **Health checks increment counter directly** - No middleware needed
-- **Load Shedding disabled by default** - Must set `Enabled: true` to activate
+- **Load Shedding configurable via Helm** - Environment variables override appsettings.json
 - **CI/CD uses GitHub Container Registry** - ghcr.io/busadave13/weather
+- **k6 for load testing** - Replaced fortio with k6
 
 ## Current State
-- 74 unit tests passing
-- Health checks increment counter on each call
-- Load shedding middleware fully implemented
-- MockeryHandler fully implemented
-- CI/CD pipeline ready for PR merge
-
-## Architecture
-
-### Health Check Counter Flow
-```
-/health/ready or /health/live called
-    ↓
-Health check class increments counter
-    ↓
-Counter value compared against threshold
-    ↓
-Return Healthy or Unhealthy based on threshold
-```
-
-### Load Shedding Flow
-```
-Incoming Request → LoadSheddingMiddleware
-    ↓
-Track request in sliding window
-    ↓
-Calculate current RPS
-    ↓
-RPS <= Threshold? → Continue to Controller
-    ↓
-RPS > Threshold → Apply failure percentage logic
-```
+- 83 unit tests passing
+- Test configuration API allows runtime control of health checks
+- Load shedding configurable via appsettings.json or Helm values
+- k6 load testing scripts available
 
 ## Configuration Example
 ```json
 {
-  "HealthCheck": {
-    "RequestCountThreshold": 1000,
-    "LiveGracePeriodRequests": 100
-  },
   "LoadShedding": {
     "Enabled": true,
     "RpsThreshold": 100,
     "FailurePercentage": 25,
-    "FailureStatusCode": 503
+    "FailureStatusCode": 503,
+    "WindowSizeSeconds": 1
   }
 }
 ```
 
-## CI/CD Artifacts
-```bash
-# Docker Image
-docker pull ghcr.io/busadave13/weather:latest
+## Helm Configuration
+```yaml
+config:
+  loadShedding:
+    enabled: true
+    rpsThreshold: 100
+    failurePercentage: 25
+    failureStatusCode: 503
+    windowSizeSeconds: 1
+```
 
-# Helm Chart
-helm install weather oci://ghcr.io/busadave13/helm/weather --version 1.0.0
+## Test Configuration API
+```bash
+# Force ready health check to fail
+curl -X POST http://localhost:5081/api/config \
+  -H "Content-Type: application/json" \
+  -d '{"forceReadyFail": true}'
+
+# Add delay to health checks
+curl -X POST http://localhost:5081/api/config \
+  -H "Content-Type: application/json" \
+  -d '{"readyDelayMs": 5000}'
+
+# Get current configuration
+curl http://localhost:5081/api/config
+```
+
+## k6 Load Testing
+```powershell
+# Run load tests
+k6 run k6/load-test.js
+k6 run k6/stress-test.js
+k6 run k6/spike-test.js
 ```
 
 ## Important Patterns
-- **Health Check Counter**: Counter incremented directly in health check classes
-- **Load Shedding**: Middleware pattern with sliding window counter for RPS tracking
+- **Test Configuration State**: Singleton for thread-safe runtime configuration
+- **Load Shedding**: Middleware with sliding window RPS tracking
 - **MockeryHandler**: DelegatingHandler pattern for HTTP interception
 - **Factory Pattern**: MockeryHandlerFactory for service-specific handlers
