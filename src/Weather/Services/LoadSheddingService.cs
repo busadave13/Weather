@@ -1,49 +1,42 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
+using Weather.Middleware;
 
-namespace Weather.Middleware;
+namespace Weather.Services;
 
 /// <summary>
-/// Middleware that implements load shedding based on requests per second (RPS).
+/// Service that implements load shedding based on requests per second (RPS).
 /// When RPS exceeds the configured threshold, a percentage of requests are rejected.
 /// </summary>
-public class LoadSheddingMiddleware
+public class LoadSheddingService : ILoadSheddingService
 {
-    private readonly RequestDelegate _next;
     private readonly LoadSheddingOptions _options;
-    private readonly ILogger<LoadSheddingMiddleware> _logger;
+    private readonly ILogger<LoadSheddingService> _logger;
     private readonly ConcurrentQueue<DateTime> _requestTimestamps;
     private readonly Random _random;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="LoadSheddingMiddleware"/> class.
+    /// Initializes a new instance of the <see cref="LoadSheddingService"/> class.
     /// </summary>
-    /// <param name="next">The next middleware in the pipeline.</param>
     /// <param name="options">The load shedding configuration options.</param>
     /// <param name="logger">The logger.</param>
-    public LoadSheddingMiddleware(
-        RequestDelegate next,
+    public LoadSheddingService(
         IOptions<LoadSheddingOptions> options,
-        ILogger<LoadSheddingMiddleware> logger)
+        ILogger<LoadSheddingService> logger)
     {
-        _next = next ?? throw new ArgumentNullException(nameof(next));
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _requestTimestamps = new ConcurrentQueue<DateTime>();
         _random = new Random();
     }
 
-    /// <summary>
-    /// Processes the request, potentially rejecting it based on load shedding rules.
-    /// </summary>
-    /// <param name="context">The HTTP context.</param>
-    public async Task InvokeAsync(HttpContext context)
+    /// <inheritdoc />
+    public bool ShouldRejectRequest()
     {
-        // If load shedding is disabled, pass through
+        // If load shedding is disabled, never reject
         if (!_options.Enabled)
         {
-            await _next(context);
-            return;
+            return false;
         }
 
         // Track this request and clean up old timestamps
@@ -58,7 +51,7 @@ public class LoadSheddingMiddleware
         if (currentRps > _options.RpsThreshold)
         {
             // Determine if this specific request should be rejected
-            if (ShouldRejectRequest())
+            if (ShouldRejectBasedOnPercentage())
             {
                 _logger.LogWarning(
                     "Load shedding: Rejecting request. RPS: {CurrentRps}, Threshold: {Threshold}, FailurePercentage: {FailurePercentage}%",
@@ -66,20 +59,18 @@ public class LoadSheddingMiddleware
                     _options.RpsThreshold,
                     _options.FailurePercentage);
 
-                context.Response.StatusCode = _options.FailureStatusCode;
-                context.Response.Headers.Append("X-Load-Shedding", "true");
-                context.Response.Headers.Append("Retry-After", "1");
-                await context.Response.WriteAsJsonAsync(new
-                {
-                    error = "Service is under heavy load",
-                    message = "Please retry your request in a moment",
-                    retryAfter = 1
-                });
-                return;
+                return true;
             }
         }
 
-        await _next(context);
+        return false;
+    }
+
+    /// <inheritdoc />
+    public int GetCurrentRps()
+    {
+        CleanupOldTimestamps(DateTime.UtcNow);
+        return CalculateRps();
     }
 
     /// <summary>
@@ -106,7 +97,7 @@ public class LoadSheddingMiddleware
     /// <summary>
     /// Determines whether the current request should be rejected based on failure percentage.
     /// </summary>
-    private bool ShouldRejectRequest()
+    private bool ShouldRejectBasedOnPercentage()
     {
         if (_options.FailurePercentage <= 0)
         {
