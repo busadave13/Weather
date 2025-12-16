@@ -3,6 +3,7 @@ using Weather.BusinessLogic;
 using Weather.Clients;
 using Weather.Clients.Handlers;
 using Weather.Configuration;
+using Weather.Extensions;
 using Weather.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -65,6 +66,9 @@ builder.Services.AddScoped<IWeatherBusinessLogic, WeatherBusinessLogic>();
 // Register test configuration state (singleton for runtime configuration via /api/config)
 builder.Services.AddSingleton<ITestConfigurationState, TestConfigurationState>();
 
+// Register load shedding middleware
+builder.Services.AddLoadShedding(builder.Configuration);
+
 // Register health checks
 builder.Services.AddHealthChecks()
     .AddCheck<LiveHealthCheck>("live", tags: new[] { "live" })
@@ -81,6 +85,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Apply load shedding early in the pipeline
+app.UseLoadShedding();
 
 app.UseAuthorization();
 
