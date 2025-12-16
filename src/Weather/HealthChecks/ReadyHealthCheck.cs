@@ -1,69 +1,52 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using Weather.Configuration;
 
 namespace Weather.HealthChecks;
 
 /// <summary>
 /// Readiness health check for Kubernetes readiness probe.
 /// Indicates whether the application is ready to accept traffic.
-/// Fails when request count threshold is exceeded, causing Kubernetes
-/// to stop routing new traffic to the pod.
+/// Can be configured via /api/config to force failure or add delays for testing.
 /// </summary>
 public class ReadyHealthCheck : IHealthCheck
 {
-    private readonly IRequestCounter _counter;
-    private readonly IOptions<HealthCheckOptions> _options;
+    private readonly ITestConfigurationState _testState;
     private readonly ILogger<ReadyHealthCheck> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReadyHealthCheck"/> class.
     /// </summary>
-    /// <param name="counter">The request counter service.</param>
-    /// <param name="options">The health check configuration options.</param>
+    /// <param name="testState">The test configuration state service.</param>
     /// <param name="logger">The logger.</param>
     public ReadyHealthCheck(
-        IRequestCounter counter,
-        IOptions<HealthCheckOptions> options,
+        ITestConfigurationState testState,
         ILogger<ReadyHealthCheck> logger)
     {
-        _counter = counter ?? throw new ArgumentNullException(nameof(counter));
-        _options = options ?? throw new ArgumentNullException(nameof(options));
+        _testState = testState ?? throw new ArgumentNullException(nameof(testState));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <inheritdoc />
-    public Task<HealthCheckResult> CheckHealthAsync(
+    public async Task<HealthCheckResult> CheckHealthAsync(
         HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
-        // Increment counter for each health check call
-        var currentCount = _counter.IncrementAndGet();
-        var threshold = _options.Value.RequestCountThreshold;
-
-        _logger.LogDebug(
-            "Ready health check: CurrentCount={CurrentCount}, Threshold={Threshold}",
-            currentCount, threshold);
-
-        // If threshold is disabled (0 or negative), always healthy
-        if (threshold <= 0)
+        // Check for forced failure first
+        if (_testState.ForceReadyFail)
         {
-            return Task.FromResult(HealthCheckResult.Healthy(
-                $"Request count: {currentCount} (threshold disabled)"));
+            _logger.LogWarning("Ready health check forced to fail via /api/config");
+            return HealthCheckResult.Unhealthy("Forced failure via /api/config");
         }
 
-        // Check if threshold exceeded
-        if (currentCount >= threshold)
+        // Apply delay if configured
+        var delay = _testState.ReadyDelayMs;
+        if (delay > 0)
         {
-            _logger.LogWarning(
-                "Ready health check failed: Request count {CurrentCount} exceeded threshold {Threshold}",
-                currentCount, threshold);
-
-            return Task.FromResult(HealthCheckResult.Unhealthy(
-                $"Request count {currentCount} exceeded threshold {threshold}"));
+            _logger.LogDebug("Ready health check applying {DelayMs}ms delay", delay);
+            await Task.Delay(delay, cancellationToken);
         }
 
-        return Task.FromResult(HealthCheckResult.Healthy(
-            $"Request count: {currentCount}/{threshold}"));
+        return HealthCheckResult.Healthy("Ready to accept traffic");
     }
 }

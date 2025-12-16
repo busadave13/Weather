@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Weather.BusinessLogic;
 using Weather.Clients;
 using Weather.Clients.Handlers;
-using Weather.Extensions;
+using Weather.Configuration;
 using Weather.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -62,14 +62,10 @@ builder.Services.AddHttpClient<IPrecipitationSensorClient, PrecipitationSensorCl
 // Register business logic services
 builder.Services.AddScoped<IWeatherBusinessLogic, WeatherBusinessLogic>();
 
-// Register load shedding middleware
-builder.Services.AddLoadShedding(builder.Configuration);
+// Register test configuration state (singleton for runtime configuration via /api/config)
+builder.Services.AddSingleton<ITestConfigurationState, TestConfigurationState>();
 
-// Register health check services
-builder.Services.Configure<Weather.HealthChecks.HealthCheckOptions>(
-    builder.Configuration.GetSection(Weather.HealthChecks.HealthCheckOptions.SectionName));
-builder.Services.AddSingleton<IRequestCounter, RequestCounter>();
-
+// Register health checks
 builder.Services.AddHealthChecks()
     .AddCheck<LiveHealthCheck>("live", tags: new[] { "live" })
     .AddCheck<ReadyHealthCheck>("ready", tags: new[] { "ready" })
@@ -86,25 +82,22 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Apply load shedding before authorization and routing
-app.UseLoadShedding();
-
 app.UseAuthorization();
 
 app.MapControllers();
 
 // Map health check endpoints
-app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+app.MapHealthChecks("/health/live", new HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("live")
 });
 
-app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("ready")
 });
 
-app.MapHealthChecks("/health/startup", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+app.MapHealthChecks("/health/startup", new HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("startup")
 });
