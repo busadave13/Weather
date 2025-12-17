@@ -2,6 +2,20 @@
 
 ## Completed Work
 
+### ✅ Sequential Thinking MCP Server (2025-12-16)
+- [x] Installed Sequential Thinking MCP Server via npx
+- [x] Configured in cline_mcp_settings.json with server name: `github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking`
+- [x] Package: `@modelcontextprotocol/server-sequential-thinking`
+- [x] Created directory: `C:\Users\daveh\OneDrive\Documents\Cline\MCP\sequentialthinking`
+- [x] Demonstrated with task dependency problem (socks → shoes → laces)
+
+### ✅ GitHub MCP Server (2025-12-16)
+- [x] Installed GitHub MCP Server via Docker
+- [x] Configured in cline_mcp_settings.json with server name: `github.com/github/github-mcp-server`
+- [x] Uses Docker image `ghcr.io/github/github-mcp-server`
+- [x] Authenticated with GitHub Personal Access Token
+- [x] Verified working with `get_me` tool
+
 ### ✅ Alerts API with Controller-Based Load Shedding (2025-12-16)
 - [x] Created `GET /api/alerts` endpoint with load shedding in controller
 - [x] Created `ILoadSheddingService` interface
