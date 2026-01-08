@@ -45,13 +45,6 @@ spec:
               value: {{ .Values.config.mockery.enabled | quote }}
             - name: Mockery__BaseUrl
               value: {{ .Values.config.mockery.baseUrl | quote }}
-          resources:
-            limits:
-              cpu: {{ .Values.resources.limits.cpu }}
-              memory: {{ .Values.resources.limits.memory }}
-            requests:
-              cpu: {{ .Values.resources.requests.cpu }}
-              memory: {{ .Values.resources.requests.memory }}
           startupProbe:
             httpGet:
               path: /health/startup

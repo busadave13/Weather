@@ -13,14 +13,6 @@ service:
   port: 80
   targetPort: 8080
 
-resources:
-  limits:
-    cpu: 500m
-    memory: 512Mi
-  requests:
-    cpu: 100m
-    memory: 256Mi
-
 # Application configuration
 config:
   # ASP.NET Core Environment (always use Production for Kubernetes)
