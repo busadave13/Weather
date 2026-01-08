@@ -4,8 +4,6 @@ using Weather.Clients;
 using Weather.Clients.Handlers;
 using Weather.Configuration;
 using Weather.HealthChecks;
-using Weather.Middleware;
-using Weather.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -66,10 +64,6 @@ builder.Services.AddScoped<IWeatherBusinessLogic, WeatherBusinessLogic>();
 
 // Register test configuration state (singleton for runtime configuration via /api/config)
 builder.Services.AddSingleton<ITestConfigurationState, TestConfigurationState>();
-
-// Register load shedding service (singleton for shared RPS tracking)
-builder.Services.Configure<LoadSheddingOptions>(builder.Configuration.GetSection("LoadShedding"));
-builder.Services.AddSingleton<ILoadSheddingService, LoadSheddingService>();
 
 // Register health checks
 builder.Services.AddHealthChecks()
