@@ -1,0 +1,47 @@
+### Weather API - Local Environment
+@host = localhost:5081
+
+### Get Weather Data
+GET http://{{host}}/api/weather
+X-Mockery-Mocks: windsensor/success, windsensor/success-2, temperaturesensor/success, precipitationsensor/success
+
+### Get Temperature Data
+GET http://{{host}}/api/weather/temperature
+X-Mockery-Mocks: temperaturesensor/success
+
+### Get Wind Data
+GET http://{{host}}/api/weather/wind
+X-Mockery-Mocks: windsensor/success
+
+### Get Precipitation Data
+GET http://{{host}}/api/weather/precipitation
+X-Mockery-Mocks: precipitationsensor/success
+
+### Get Alerts
+GET http://{{host}}/api/alerts
+X-Mockery-Mocks: windsensor/success, windsensor/success-2, temperaturesensor/success, precipitationsensor/success
+
+### Get Config
+GET http://{{host}}/api/config
+
+### Set Config
+POST http://{{host}}/api/config
+Content-Type: application/json
+
+{
+    "forceStartupFail": false,
+    "forceReadyFail": false,
+    "forceLiveFail": false,
+    "startupDelayMs": 0,
+    "readyDelayMs": 0,
+    "liveDelayMs": 0
+}
+
+### Health Check - Live
+GET http://{{host}}/health/live
+
+### Health Check - Ready
+GET http://{{host}}/health/ready
+
+### Health Check - Startup
+GET http://{{host}}/health/startup
